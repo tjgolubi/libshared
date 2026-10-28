@@ -25,6 +25,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include <Table.h>
+#include <Color.h>
 #include <iostream>
 #include <test.h>
 
@@ -36,12 +37,12 @@ int main (int, char**)
   try
   {
     // Create colors.
-    Color header_color (Color (Color::yellow, Color::nocolor, false, false, false));
-    Color odd_color ("on gray1");
-    Color even_color ("on gray0");
+    Color header_color = Color{fmt::term_color::yellow, fmt::no_color, fmt::emphasis{}};
+    Color odd_color    = Style::Parse("on gray1");
+    Color even_color   = Style::Parse("on gray0");
 
     // Now render a string-only grid.
-    Color single_cell ("bold white on red");
+    Color single_cell = Style::Parse("bold white on red");
 
     Table t1;
     t1.width (80);
@@ -111,8 +112,8 @@ int main (int, char**)
     t2.add ("", true);
     t2.add ("", true);
 
-    Color blue ("on bright blue");
-    Color white ("on bright white");
+    Color blue  = Style::Parse("on bright blue");
+    Color white = Style::Parse("on bright white");
 
     for (row = 0; row < 8; ++row)
     {

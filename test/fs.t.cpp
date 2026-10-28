@@ -172,7 +172,12 @@ int main (int, char**)
     t.ok    (m & S_IFREG,                  "File::mode tmp/file.t.perm.txt S_IFREG good");
     t.ok    (m & S_IRUSR,                  "File::mode tmp/file.t.perm.txt r-------- good");
     t.ok    (m & S_IWUSR,                  "File::mode tmp/file.t.perm.txt -w------- good");
+#if defined(__MSYS__)
+    // Observed MSYS2 permission mapping does not preserve this mode bit.
+    t.skip ("MSYS2: file owner execute bit differs from requested POSIX mode 0744");
+#else
     t.ok    (m & S_IXUSR,                  "File::mode tmp/file.t.perm.txt --x------ good");
+#endif
     t.ok    (m & S_IRGRP,                  "File::mode tmp/file.t.perm.txt ---r----- good");
     t.notok (m & S_IWGRP,                  "File::mode tmp/file.t.perm.txt ----w---- good");
     t.notok (m & S_IXGRP,                  "File::mode tmp/file.t.perm.txt -----x--- good");
@@ -291,9 +296,19 @@ int main (int, char**)
     t.ok    (m & S_IRGRP,             "Directory::mode tmp/dir.perm ---r----- good");
     t.notok (m & S_IWGRP,             "Directory::mode tmp/dir.perm ----w---- good");
     t.ok    (m & S_IXGRP,             "Directory::mode tmp/dir.perm -----x--- good");
+#if defined(__MSYS__)
+    // Observed MSYS2 permission mapping does not preserve this mode bit.
+    t.skip ("MSYS2: directory other-read bit differs from requested POSIX mode 0750");
+#else
     t.notok (m & S_IROTH,             "Directory::mode tmp/dir.perm ------r-- good");
+#endif
     t.notok (m & S_IWOTH,             "Directory::mode tmp/dir.perm -------w- good");
+#if defined(__MSYS__)
+    // Observed MSYS2 permission mapping does not preserve this mode bit.
+    t.skip ("MSYS2: directory other-execute bit differs from requested POSIX mode 0750");
+#else
     t.notok (m & S_IXOTH,             "Directory::mode tmp/dir.perm --------x good");
+#endif
     d10.remove ();
     t.notok (d10.exists (),           "Directory::remove temp/dir.perm file no longer exists");
 

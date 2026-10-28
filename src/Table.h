@@ -60,8 +60,8 @@ public:
   int addRow ();
   int addRowOdd ();
   int addRowEven ();
-  void set (int, int, const std::string&, const Color color = Color::nocolor);
-  void set (int, int, int, const Color color = Color::nocolor);
+  void set (int, int, const std::string&, const Color color = Color{});
+  void set (int, int, int, const Color color = Color{});
   void set (int, int, const Color);
 
   // View rendering.
@@ -80,15 +80,15 @@ private:
   std::vector <bool>                      _oddness;
   int                                     _width             {0};
   int                                     _left_margin       {0};
-  Color                                   _header            {0};
-  Color                                   _odd               {0};
-  Color                                   _even              {0};
+  Color                                   _header            {};
+  Color                                   _odd               {};
+  Color                                   _even              {};
   int                                     _intra_padding     {1};
-  Color                                   _intra_odd         {0};
-  Color                                   _intra_even        {0};
+  Color                                   _intra_odd         {};
+  Color                                   _intra_even        {};
   int                                     _extra_padding     {0};
-  Color                                   _extra_odd         {0};
-  Color                                   _extra_even        {0};
+  Color                                   _extra_odd         {};
+  Color                                   _extra_even        {};
   int                                     _truncate_lines    {0};
   int                                     _truncate_rows     {0};
   bool                                    _forceColor        {false}; // TODO: remove once TW and TI have switched

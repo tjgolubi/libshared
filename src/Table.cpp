@@ -25,6 +25,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include <Table.h>
+#include <Color.h>
 #include <format.h>
 #include <shared.h>
 #ifndef _WIN32
@@ -47,7 +48,7 @@ void Table::add (const std::string& col, bool alignLeft, bool wrap)
 int Table::addRow ()
 {
   _data.emplace_back (_columns.size (), "");
-  _color.emplace_back (_columns.size (), Color::nocolor);
+  _color.emplace_back (_columns.size (), Color{});
   _oddness.push_back (_data.size () % 2 != 0);
   return _data.size () - 1;
 }
@@ -56,7 +57,7 @@ int Table::addRow ()
 int Table::addRowOdd ()
 {
   _data.emplace_back (_columns.size (), "");
-  _color.emplace_back (_columns.size (), Color::nocolor);
+  _color.emplace_back (_columns.size (), Color{});
   _oddness.push_back (true);
   return _data.size () - 1;
 }
@@ -65,7 +66,7 @@ int Table::addRowOdd ()
 int Table::addRowEven ()
 {
   _data.emplace_back (_columns.size (), "");
-  _color.emplace_back (_columns.size (), Color::nocolor);
+  _color.emplace_back (_columns.size (), Color{});
   _oddness.push_back (false);
   return _data.size () - 1;
 }
@@ -75,7 +76,7 @@ void Table::set (int row, int col, const std::string& value, const Color color)
 {
   _data[row][col] = value;
 
-  if (color.nontrivial ())
+  if (!color.empty())
     _color[row][col] = color;
 }
 
@@ -85,14 +86,14 @@ void Table::set (int row, int col, int value, const Color color)
   std::string string_value = format (value);
   _data[row][col] = string_value;
 
-  if (color.nontrivial ())
+  if (!color.empty())
     _color[row][col] = color;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 void Table::set (int row, int col, const Color color)
 {
-  if (color.nontrivial ())
+  if (!color.empty())
     _color[row][col] = color;
 }
 
@@ -102,17 +103,17 @@ std::string Table::render ()
   // Piped output disables color, unless overridden.
   if (! _with_color)
   {
-    _header     = Color ("");
-    _odd        = Color ("");
-    _even       = Color ("");
-    _intra_odd  = Color ("");
-    _intra_even = Color ("");
-    _extra_odd  = Color ("");
-    _extra_even = Color ("");
+    _header     = Color{};
+    _odd        = Color{};
+    _even       = Color{};
+    _intra_odd  = Color{};
+    _intra_even = Color{};
+    _extra_odd  = Color{};
+    _extra_even = Color{};
 
     for (auto& row : _color)
       for (auto& col : row)
-        col = Color ("");
+        col = Color{};
 
     _underline_headers = true;
   }
@@ -195,6 +196,7 @@ std::string Table::render ()
 
   // Output string.
   std::string out;
+  auto append = std::back_inserter(out);
   _lines = 0;
 
   // Render column headers.
@@ -202,10 +204,10 @@ std::string Table::render ()
   std::string extra       = std::string (_extra_padding, ' ');
   std::string intra       = std::string (_intra_padding, ' ');
 
-  std::string extra_odd   = _extra_odd.colorize  (extra);
-  std::string extra_even  = _extra_even.colorize (extra);
-  std::string intra_odd   = _intra_odd.colorize  (intra);
-  std::string intra_even  = _intra_even.colorize (intra);
+  std::string extra_odd   = fmt::wrap_sgr(_extra_odd,  extra);
+  std::string extra_even  = fmt::wrap_sgr(_extra_even, extra);
+  std::string intra_odd   = fmt::wrap_sgr(_intra_odd,  intra);
+  std::string intra_even  = fmt::wrap_sgr(_intra_even, intra);
 
   for (unsigned int i = 0; i < max_lines; ++i)
   {
@@ -217,7 +219,7 @@ std::string Table::render ()
         out += intra;
 
       if (headers[c].size () < max_lines - i)
-        out += _header.colorize (std::string (widths[c], ' '));
+        fmt::format_to(append, _header, "{:{}}", "", widths[c]);
       else
         out += headers[c][i];
     }
@@ -242,7 +244,7 @@ std::string Table::render ()
       if (c)
         out += intra;
 
-      out += _header.colorize (std::string (widths[c], '-'));
+      fmt::format_to(append, _header, "{:-<{}}", "", widths[c]);
     }
 
     out += '\n';
@@ -259,16 +261,13 @@ std::string Table::render ()
     auto oddness = _oddness[row];
     Color row_color = oddness ? _odd : _even;
 
-    // TODO row_color.blend (provided color);
+    // TODO row_color.overlay (provided style);
     // TODO Problem: colors for columns are specified, not rows,
     //      therefore there are only cell colors, not intra colors.
 
-    Color cell_color;
     for (unsigned int col = 0; col < _columns.size (); ++col)
     {
-      cell_color = row_color;
-      cell_color.blend (_color[row][col]);
-
+      auto cell_color = overlay(row_color, _color[row][col]);
       cells.emplace_back ();
       renderCell (cells[col], _data[row][col], widths[col], _align[col], _wrap[col], cell_color);
 
@@ -288,8 +287,8 @@ std::string Table::render ()
       {
         if (col)
         {
-          if (row_color.nontrivial ())
-            out += row_color.colorize (intra);
+          if (!row_color.empty())
+            fmt::format_to(append, row_color, "{}", intra);
           else
             out += (oddness ? intra_odd : intra_even);
         }
@@ -298,9 +297,8 @@ std::string Table::render ()
           out += cells[col][i];
         else
         {
-          cell_color = row_color;
-          cell_color.blend (_color[row][col]);
-          out += cell_color.colorize (std::string (widths[col], ' '));
+          auto cell_color = overlay(row_color, _color[row][col]);
+          fmt::format_to(append, cell_color, "{:{}}", "", widths[col]);
         }
       }
 
@@ -331,7 +329,7 @@ void Table::measureCell (
   unsigned int& minimum,
   unsigned int& maximum) const
 {
-  std::string stripped = Color::strip (data);
+  std::string stripped = Style::strip_sgr (data);
   maximum = longestLine (stripped);
   minimum = longestWord (stripped);
 }
@@ -352,24 +350,16 @@ void Table::renderCell (
 
     for (const auto& line : raw)
       if (alignLeft)
-        lines.push_back (
-          color.colorize (
-            leftJustify (line, width)));
+        lines.push_back (fmt::wrap_sgr(color, leftJustify (line, width)));
       else
-        lines.push_back (
-          color.colorize (
-            rightJustify (line, width)));
+        lines.push_back (fmt::wrap_sgr(color, rightJustify (line, width)));
   }
   else
   {
     if (alignLeft)
-      lines.push_back (
-        color.colorize (
-          leftJustify (value, width)));
+      lines.push_back (fmt::wrap_sgr(color, leftJustify (value, width)));
     else
-      lines.push_back (
-        color.colorize (
-          rightJustify (value, width)));
+      lines.push_back (fmt::wrap_sgr(color, rightJustify (value, width)));
   }
 }
 
