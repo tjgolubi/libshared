@@ -25,6 +25,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include <Composite.h>
+#include <Color.h>
 #include <format.h>
 #include <limits>
 #include <sstream>
@@ -138,13 +139,13 @@ namespace
 //
 // For example:
 //   Composite c;
-//   c.add ("aaaaaaaaaa",  2, Color ("..."));    // Layer 1
-//   c.add ("bbbbb",       5, Color ("..."));    // Layer 2
-//   c.add ("c",          15, Color ("..."));    // Layer 3
+//   c.add ("aaaaaaaaaa",  2, Style::Parse ("..."));    // Layer 1
+//   c.add ("bbbbb",       5, Style::Parse ("..."));    // Layer 2
+//   c.add ("c",          15, Style::Parse ("..."));    // Layer 3
 //
-//   _layers = { std::make_tuple ("aaaaaaaaaa",  2, Color ("...")),
-//               std::make_tuple ("bbbbb",       5, Color ("...")),
-//               std::make_tuple ("c",          15, Color ("..."))};
+//   _layers = { std::make_tuple ("aaaaaaaaaa",  2, Style::Parse ("...")),
+//               std::make_tuple ("bbbbb",       5, Style::Parse ("...")),
+//               std::make_tuple ("c",          15, Style::Parse ("..."))};
 //
 void Composite::add (
   const std::string& text,
@@ -159,13 +160,13 @@ void Composite::add (
 //
 // For example:
 //   Composite c;
-//   c.add ("aaaaaaaaaa",  2, Color ("..."));    // Layer 1
-//   c.add ("bbbbb",       5, Color ("..."));    // Layer 2
-//   c.add ("c",          15, Color ("..."));    // Layer 3
+//   c.add ("aaaaaaaaaa",  2, Style::Parse ("..."));    // Layer 1
+//   c.add ("bbbbb",       5, Style::Parse ("..."));    // Layer 2
+//   c.add ("c",          15, Style::Parse ("..."));    // Layer 3
 //
-//   _layers = { std::make_tuple ("aaaaaaaaaa",  2, Color ("...")),
-//               std::make_tuple ("bbbbb",       5, Color ("...")),
-//               std::make_tuple ("c",          15, Color ("..."))};
+//   _layers = { std::make_tuple ("aaaaaaaaaa",  2, Style::Parse ("...")),
+//               std::make_tuple ("bbbbb",       5, Style::Parse ("...")),
+//               std::make_tuple ("c",          15, Style::Parse ("..."))};
 //
 // Arrange strings conceptually:
 //              111111
@@ -240,7 +241,7 @@ std::string Composite::str () const
         column_count += 2;
         break;
       default:  // Should not happen.
-        throw format ("Unexpected character width {1} of code point 0x{2}.", ch_width, formatHex (character));
+        throw fmt::format("Unexpected character width {} of code point 0x{}.", ch_width, formatHex (character));
       }
 
       // Remember byte offset of first UTF-8 byte of next character in the layer text.
@@ -250,21 +251,21 @@ std::string Composite::str () const
 
   // Now walk the column vector, emitting every character and every detected layer change.
   std::stringstream out;
+  constexpr auto reset = fmt::sgr_reset();
   unsigned int prev_layer = 0;
   for (unsigned int column_i = 0; column_i < columns.size (); ++column_i)
   {
     auto column_data = columns[column_i];
     auto curr_layer = column_data.layer_num;
-    const auto& text = std::get <0> (_layers[curr_layer - 1]);
 
     // A change in layer triggers an ANSI escape code emit.
     if (prev_layer != curr_layer)
     {
-      if (prev_layer)  // Reset attributes (if any) of previous layer.
-        out << std::get <2> (_layers[prev_layer - 1]).end ();
+      if (prev_layer && !std::get <2> (_layers[prev_layer - 1]).empty())  // Reset attributes (if any) of previous layer.
+        out.write(reset.data(), reset.size());
 
       if (curr_layer) // Set attributes (if any) of current layer.
-        out << std::get <2> (_layers[curr_layer - 1]).code ();
+        out << fmt::to_sgr(std::get <2> (_layers[curr_layer - 1]));
 
       prev_layer = curr_layer;
     }
@@ -274,15 +275,18 @@ std::string Composite::str () const
     if (column_data.is_padding ())
       out << ' ';  // Display padding columns as spaces.
     else  // Display a slice of the layer text (Spacer [Nonspacer ...]).
+    {
+      const auto& text = std::get <0> (_layers[curr_layer - 1]);
       out.write(text.data () + column_data.text_begin_i, column_data.byte_count ());
+    }
 
     if (column_data.char_0_width == 2)
       ++column_i;  // Wide characters cover two columns.
   }
 
   // Terminate the color codes, if necessary.
-  if (prev_layer)
-    out << std::get <2> (_layers[prev_layer - 1]).end ();
+  if (prev_layer && !std::get <2> (_layers[prev_layer - 1]).empty())
+    out.write(reset.data(), reset.size());
 
   return out.str ();
 }

@@ -1,0 +1,4 @@
+[submodule "ext/fmt"]
+	path = ext/fmt
+	url = https://github.com/tjgolubi/fmt.git
+	branch = color-dev

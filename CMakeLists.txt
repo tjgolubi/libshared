@@ -9,6 +9,11 @@ set (CMAKE_EXPORT_COMPILE_COMMANDS ON)
 project (shared)
 include (CXXSniffer)
 
+if (NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ext/fmt/CMakeLists.txt")
+  message (FATAL_ERROR "Initialize FmtColor with: git submodule update --init --recursive")
+endif ()
+add_subdirectory (ext/fmt)
+
 include (CheckFunctionExists)
 
 set (PROJECT_VERSION "1.0.0")

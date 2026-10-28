@@ -56,6 +56,10 @@ set (shared_SRCS Args.cpp
 
 add_library (shared STATIC ${shared_SRCS})
 
+# Shared rendering interfaces expose fmt styles to consumers.
+target_link_libraries (shared PUBLIC fmt::fmt)
+target_compile_definitions (shared PUBLIC FMT_COLOR_COMPACT_SGR=1)
+
 set (CMAKE_INSTALL_LIBDIR lib CACHE PATH "Output directory for libraries")
 install (TARGETS shared DESTINATION lib)
 install (FILES ${shared_HEADERS} DESTINATION include)

@@ -25,25 +25,27 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include <Palette.h>
+#include <Color.h>
 
 ////////////////////////////////////////////////////////////////////////////////
 // Use a default palette, which is overwritten in ::initialize.
 Palette::Palette ()
 {
+  using term = fmt::term_color;
   _colors = {
-    Color ("white on red"),
-    Color ("white on blue"),
-    Color ("black on green"),
-    Color ("black on magenta"),
-    Color ("black on cyan"),
-    Color ("black on yellow"),
-    Color ("black on white"),
-    Color ("white on bright red"),
-    Color ("white on bright blue"),
-    Color ("black on bright green"),
-    Color ("black on bright magenta"),
-    Color ("black on bright cyan"),
-    Color ("black on bright yellow"),
+    Color{term::white, term::red},
+    Color{term::white, term::blue},
+    Color{term::black, term::green},
+    Color{term::black, term::magenta},
+    Color{term::black, term::cyan},
+    Color{term::black, term::yellow},
+    Color{term::black, term::white},
+    Color{term::white, term::bright_red},
+    Color{term::white, term::bright_blue},
+    Color{term::black, term::bright_green},
+    Color{term::black, term::bright_magenta},
+    Color{term::black, term::bright_cyan},
+    Color{term::black, term::bright_yellow}
   };
 
   _current = 0;
