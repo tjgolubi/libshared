@@ -33,6 +33,9 @@
 #include <unicode.h>
 #include <utf8.h>
 
+#include <fmt/styled_text.h>
+#include <fmt/backslash.h>
+
 ////////////////////////////////////////////////////////////////////////////////
 Pig::Pig (const std::string& text)
 : _text {std::make_shared <std::string> (text)}
@@ -685,6 +688,17 @@ std::string Pig::str () const
 // part white on red, followed by the index equivalent.
 std::string Pig::dump () const
 {
+  using tc = fmt::term_color;
+  constexpr auto match_color   = fmt::text_style{tc::white, tc::green};
+  constexpr auto unmatch_color = fmt::text_style{tc::white, tc::red  };
+  auto match   = fmt::backslash_escape(_text->substr(0, _cursor));
+  auto unmatch = fmt::backslash_escape(_text->substr(_cursor));
+
+  return fmt::format("{}{} {}/{}", fmt::styled(match,   match_color),
+                                   fmt::styled(unmatch, unmatch_color),
+                                   _cursor, _text->length());
+
+#if 0
   std::stringstream out;
   if (_cursor)
     out << "[37;42m"
@@ -699,6 +713,7 @@ std::string Pig::dump () const
       << _text->length ();
 
   return str_replace (out.str (), "\n", "\\n");
+#endif
 }
 
 ////////////////////////////////////////////////////////////////////////////////
