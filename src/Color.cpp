@@ -199,17 +199,4 @@ auto Spec(const fmt::text_style& ts) -> std::string {
   return desc;
 } // Spec
 
-// Remove color codes from a string.
-std::string strip_sgr(std::string_view input) {
-  bool inside = false;
-  auto output = std::string{};
-  output.reserve(input.size());
-  for (auto c: input) {
-    if (inside) inside = (c != 'm');
-    else if (c == '\x1b') inside = true;
-    else output += c;
-  }
-  return output;
-} // strip_sgr
-
 } // Style

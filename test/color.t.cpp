@@ -25,6 +25,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include <Color.h>
+#include <fmt/strip_ansi.h>
 #include <cstdio>
 #include <test.h>
 
@@ -194,10 +195,10 @@ int main (int, char**)
   t.is (Style::colorize ("foo", "0x010101 on grey0"), std::string ("\033[38;2;1;1;1;48;5;232mfoo\033[0m"), "0x010101 on grey0 preserves channel representations");
   t.is (Style::colorize ("foo", "0x101010 on grey23"), std::string ("\033[38;2;16;16;16;48;5;255mfoo\033[0m"), "0x101010 on grey23 preserves channel representations");
 
-  // std::string Style::strip_sgr (const std::string&);
-  t.is (Style::strip_sgr (""),                  "",    "Style::strip_sgr '' -> ''");
-  t.is (Style::strip_sgr ("foo"),               "foo", "Style::strip_sgr 'foo' -> 'foo'");
-  t.is (Style::strip_sgr ("f\033[1mo\033[0mo"), "foo", "Style::strip_sgr 'f<b>o</b>o' -> 'foo'");
+  // std::string fmt::strip_ansi (const std::string&);
+  t.is (fmt::strip_ansi (""),                  "",    "fmt::strip_ansi '' -> ''");
+  t.is (fmt::strip_ansi ("foo"),               "foo", "fmt::strip_ansi 'foo' -> 'foo'");
+  t.is (fmt::strip_ansi ("f\033[1mo\033[0mo"), "foo", "fmt::strip_ansi 'f<b>o</b>o' -> 'foo'");
 
   // Native SGR generation.
   t.is (fmt::to_sgr(Style::Parse("rgb012 on bright yellow")), "\033[38;5;24;103m", "fmt::to_sgr combines indexed foreground and bright terminal background");
@@ -213,7 +214,7 @@ int main (int, char**)
     const auto style = Style::Parse(spec);
     const auto canonical = Style::Spec(style);
     t.ok (Style::Parse(canonical) == style, "style specification round trip");
-    t.ok (Style::strip_sgr(fmt::wrap_sgr(style, "sample")) == "sample",
+    t.ok (fmt::strip_ansi(fmt::wrap_sgr(style, "sample")) == "sample",
           "styled text retains its visible content");
   }
 

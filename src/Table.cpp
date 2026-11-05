@@ -26,6 +26,7 @@
 
 #include <Table.h>
 #include <Color.h>
+#include <fmt/strip_ansi.h>
 #include <format.h>
 #include <shared.h>
 #ifndef _WIN32
@@ -329,7 +330,7 @@ void Table::measureCell (
   unsigned int& minimum,
   unsigned int& maximum) const
 {
-  std::string stripped = Style::strip_sgr (data);
+  std::string stripped = fmt::strip_ansi (data);
   maximum = longestLine (stripped);
   minimum = longestWord (stripped);
 }
