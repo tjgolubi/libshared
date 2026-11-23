@@ -229,7 +229,7 @@ json::array* json::array::parse (Pig& pig)
         else
         {
           delete arr;
-          throw format ("Error: missing value after ',' at position {1}", (int) pig.cursor ());
+          throw ::format ("Error: missing value after ',' at position {1}", (int) pig.cursor ());
         }
       }
     }
@@ -237,7 +237,7 @@ json::array* json::array::parse (Pig& pig)
     if (pig.skip (']'))
       return arr;
     else
-      throw format ("Error: missing ']' at position {1}", (int) pig.cursor ());
+      throw ::format ("Error: missing ']' at position {1}", (int) pig.cursor ());
 
     delete arr;
   }
@@ -309,7 +309,7 @@ json::object* json::object::parse (Pig& pig)
         else
         {
           delete obj;
-          throw format ("Error: missing value after ',' at position {1}", (int) pig.cursor ());
+          throw ::format ("Error: missing value after ',' at position {1}", (int) pig.cursor ());
         }
       }
     }
@@ -317,7 +317,7 @@ json::object* json::object::parse (Pig& pig)
     if (pig.skip ('}'))
       return obj;
     else
-      throw format ("Error: missing '}' at position {1}", (int) pig.cursor ());
+      throw ::format ("Error: missing '}' at position {1}", (int) pig.cursor ());
 
     delete obj;
   }
@@ -343,10 +343,10 @@ bool json::object::parse_pair (
       if ((val = json::value::parse (pig)))
         return true;
       else
-        throw format ("Error: missing value at position {1}", (int) pig.cursor ());
+        throw ::format ("Error: missing value at position {1}", (int) pig.cursor ());
     }
     else
-      throw format ("Error: missing ':' at position {1}", (int) pig.cursor ());
+      throw ::format ("Error: missing ':' at position {1}", (int) pig.cursor ());
   }
 
   pig.restoreTo (checkpoint);
@@ -389,14 +389,14 @@ json::value* json::parse (const std::string& input)
        if (n.peek () == '{') root = json::object::parse (n);
   else if (n.peek () == '[') root = json::array::parse (n);
   else
-    throw format ("Error: expected '{' or '[' at position {1}", (int) n.cursor ());
+    throw ::format ("Error: expected '{' or '[' at position {1}", (int) n.cursor ());
 
   // Check for end condition.
   n.skipWS ();
   if (!n.eos ())
   {
     delete root;
-    throw format ("Error: extra characters found at position {1}", (int) n.cursor ());
+    throw ::format ("Error: extra characters found at position {1}", (int) n.cursor ());
   }
 
   return root;
