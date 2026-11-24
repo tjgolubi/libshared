@@ -1025,18 +1025,6 @@ std::string osName ()
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// 16.8 Predefined macro names [cpp.predefined]
-//
-// The following macro names shall be defined by the implementation:
-//
-// __cplusplus
-//   The name __cplusplus is defined to the value 201402L when compiling a C++
-//   translation unit.156
-//
-// ---
-//   156) It is intended that future versions of this standard will replace the
-//   value of this macro with a greater value. Non-conforming compilers should
-//   use a value with at most five decimal digits.
 std::string cppCompliance ()
 {
 #ifdef __cplusplus
@@ -1045,9 +1033,9 @@ std::string cppCompliance ()
        if (level == 199711) return "C++98/03";
   else if (level == 201103) return "C++11";
   else if (level == 201402) return "C++14";
-
-  // This is a hack.  Replace with correct value on standard publication.
-  else if (level >  201700) return "C++17";
+  else if (level == 201703) return "C++17";
+  else if (level == 202002) return "C++20";
+  else if (level == 202302) return "C++23";
 
   // Unknown, just show the value.
   else if (level >   99999) return format (__cplusplus);
