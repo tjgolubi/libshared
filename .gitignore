@@ -13,3 +13,4 @@ install_manifest.txt
 lex
 libshared.a
 *.cbp
+/build/
