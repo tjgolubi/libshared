@@ -14,4 +14,3 @@ lex
 libshared.a
 *.cbp
 /build/
-/build.bash
