@@ -30,7 +30,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 int main (int, char**)
 {
-  UnitTest t (79);
+  UnitTest t (84);
 
   // std::string format (char);
   t.is (format ('A'), "A", "format ('A') -> A");
@@ -70,6 +70,13 @@ int main (int, char**)
 
   t.is (format1 ("pre {1}{2}{3} post", "one", "two", "three"), "pre onetwothree post", "format 3a");
   t.is (format1 ("pre {3}{1}{2} post", "one", "two", "three"), "pre threeonetwo post", "format 3b");
+
+  t.is (format0 ("pre {0} post", "mid"), "pre mid post", "format0 starts at zero");
+  t.is (format0 ("{0}{0}", "mid"), "midmid", "format0 repeats an argument");
+  t.is (format0 ("{2} {0} {1}", "one", 2, "three"), "three one 2",
+        "format0 reorders mixed argument types");
+  t.is (format0 ("{0}", "{1}", "done"), "done", "format0 expands an inserted placeholder");
+  t.is (format0 ("{0} {1}", "one"), "one {1}", "format0 preserves an unmatched placeholder");
 
   // std::string leftJustify (const std::string&, const int);
   t.is (leftJustify (123, 3), "123",   "leftJustify 123,3 -> '123'");

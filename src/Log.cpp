@@ -95,7 +95,7 @@ void Log::write (const std::string& category, const std::string& line)
         std::string message = Datetime ().toISO ()
                             + ' ' + PACKAGE_VERSION
                             + ' ' + category
-                            + ' ' + format1 ("(Repeated {1} times)", _repetition)
+                            + ' ' + format0 ("(Repeated {0} times)", _repetition)
                             + '\n';
 
         if (!_name.empty ())
