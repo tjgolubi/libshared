@@ -147,8 +147,10 @@ void replace_positional (
   int positional,
   const std::string& to)
 {
+  if (positional < 0 || positional > 100)
+    throw std::string ("replace_positional: positional index must be between 0 and 100");
   if (count_positionals(to) != 0)
-    throw "replace_positional: recursive `to` argument";
+    throw std::string ("replace_positional: recursive `to` argument");
   auto from = "{" + std::to_string(positional) + "}";
   auto count = count_occurrences(fmt, from);
   auto before = count_positionals(fmt);
@@ -159,7 +161,7 @@ void replace_positional (
     pos += to.length ();
   }
   if (count_positionals(fmt) != before - count)
-    throw "replace_positional: weird case detected";
+    throw std::string ("replace_positional: weird case detected");
 }
 
 ////////////////////////////////////////////////////////////////////////////////

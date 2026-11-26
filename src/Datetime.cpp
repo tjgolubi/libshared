@@ -88,7 +88,7 @@ Datetime::Datetime (const std::string& input, const std::string& format)
   clear ();
   std::string::size_type start = 0;
   if (! parse (input, start, format))
-    throw ::format1 ("'{1}' is not a valid date in the '{2}' format.", input, format);
+    throw ::format0 ("'{0}' is not a valid date in the '{1}' format.", input, format);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
