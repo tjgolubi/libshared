@@ -1040,17 +1040,22 @@ std::string osName ()
 std::string cppCompliance ()
 {
 #ifdef __cplusplus
-  auto level = __cplusplus;
+#ifdef _MSVC_LANG
+  const auto level = _MSVC_LANG;
+#else
+  const auto level = __cplusplus;
+#endif
 
        if (level == 199711) return "C++98/03";
   else if (level == 201103) return "C++11";
   else if (level == 201402) return "C++14";
 
-  // This is a hack.  Replace with correct value on standard publication.
-  else if (level >  201700) return "C++17";
+  else if (level == 201703) return "C++17";
+  else if (level == 202002) return "C++20";
+  else if (level == 202100 || level == 202302) return "C++23";
 
   // Unknown, just show the value.
-  else if (level >   99999) return format (__cplusplus);
+  else if (level >   99999) return ::format (level);
 #endif
 
   // No C++.

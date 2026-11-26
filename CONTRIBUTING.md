@@ -35,5 +35,4 @@ To be a little more explicit, the common elements across the languages are:
 
 We target Python 3 so that our test suite runs on the broadest set of platforms.
 
-We can safely target C++17 because all the default compilers on our supported platforms are ready.
-Feel free to use C++20 provided that all build platforms support this.
+libshared builds with C++23 and requires CMake 3.21 or later.
