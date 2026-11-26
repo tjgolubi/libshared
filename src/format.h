@@ -70,6 +70,12 @@ const std::string format1 (const std::string& fmt, Args... args)
     return format (1, fmt, args...);
 }
 
+template<typename... Args>
+const std::string format0 (const std::string& fmt, Args... args)
+{
+    return format (0, fmt, args...);
+}
+
 std::string leftJustify (const int, const int);
 std::string leftJustify (const std::string&, const int);
 std::string rightJustifyZero (const int, const int);
