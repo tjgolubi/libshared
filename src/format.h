@@ -56,6 +56,12 @@ template<> struct ostream_formattable<unsigned int> : std::true_type {};
 template<> struct ostream_formattable<unsigned long> : std::true_type {};
 template<> struct ostream_formattable<unsigned long long> : std::true_type {};
 
+template<> struct ostream_formattable<const char*> : std::true_type {};
+template<> struct ostream_formattable<std::string_view> : std::true_type {};
+template<> struct ostream_formattable<std::wstring_view> : std::true_type {};
+template<> struct ostream_formattable<std::string> : std::true_type {};
+template<> struct ostream_formattable<std::wstring> : std::true_type {};
+
 #ifdef __cpp_lib_format
 template<typename T>
   requires (ostream_formattable<T>::value &&
@@ -72,8 +78,6 @@ struct std::formatter<T, char> : std::formatter<std::string_view, char>
 };
 #endif
 
-std::string format (std::string&);
-std::string format (const char*);
 std::string formatHex (int);
 std::string format (float, int, int);
 std::string format (double, int, int);
