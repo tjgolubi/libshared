@@ -30,7 +30,47 @@
 #include <algorithm>
 #include <sstream>
 #include <string>
+#include <type_traits>
 #include <vector>
+
+#if __cplusplus >= 202002L || (defined (_MSVC_LANG) && _MSVC_LANG >= 202002L)
+#include <version>
+#endif
+
+#ifdef __cpp_lib_format
+#include <format>
+#include <string_view>
+#endif
+
+// Opt in to formatting through operator<<. Specialize beside program-defined types.
+template<typename T>
+struct ostream_formattable : std::false_type {};
+
+template<> struct ostream_formattable<char> : std::true_type {};
+template<> struct ostream_formattable<char*> : std::true_type {};
+template<> struct ostream_formattable<float> : std::true_type {};
+template<> struct ostream_formattable<int> : std::true_type {};
+template<> struct ostream_formattable<long> : std::true_type {};
+template<> struct ostream_formattable<long long> : std::true_type {};
+template<> struct ostream_formattable<unsigned int> : std::true_type {};
+template<> struct ostream_formattable<unsigned long> : std::true_type {};
+template<> struct ostream_formattable<unsigned long long> : std::true_type {};
+
+#ifdef __cpp_lib_format
+template<typename T>
+  requires (ostream_formattable<T>::value &&
+            (std::is_class_v<T> || std::is_union_v<T> || std::is_enum_v<T>) &&
+            requires (std::ostream& out, const T& value) { out << value; })
+struct std::formatter<T, char> : std::formatter<std::string_view, char>
+{
+  auto format (const T& value, auto& context) const
+  {
+    std::ostringstream out;
+    out << value;
+    return std::formatter<std::string_view, char>::format (out.view (), context);
+  }
+};
+#endif
 
 std::string format (std::string&);
 std::string format (const char*);
@@ -44,9 +84,18 @@ void replace_positional (std::string&, int, const std::string&);
 template<typename T>
 const std::string format (T value)
 {
-    std::stringstream s;
-    s << value;
-    return s.str ();
+    if constexpr (ostream_formattable<T>::value)
+    {
+        std::stringstream s;
+        s << value;
+        return s.str ();
+    }
+    else
+    {
+        static_assert (ostream_formattable<T>::value,
+                       "::format<T> requires an ostream_formattable<T> specialization");
+        return {};
+    }
 }
 
 template<typename T>
