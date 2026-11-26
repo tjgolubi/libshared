@@ -39,7 +39,7 @@ std::string format (float, int, int);
 std::string format (double, int, int);
 std::string format (double);
 
-void replace_positional (std::string&, const std::string&, const std::string&);
+void replace_positional (std::string&, int, const std::string&);
 
 template<typename T>
 const std::string format (T value)
@@ -53,7 +53,7 @@ template<typename T>
 const std::string format (int fmt_num, const std::string& fmt, T arg)
 {
     std::string output = fmt;
-    replace_positional (output, '{' + format (fmt_num) + '}', format (arg));
+    replace_positional (output, fmt_num, format (arg));
     return output;
 }
 
