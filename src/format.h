@@ -65,7 +65,7 @@ const std::string format (int fmt_num, const std::string& fmt, T arg, Args... ar
 }
 
 template<typename... Args>
-const std::string format (const std::string& fmt, Args... args)
+const std::string format1 (const std::string& fmt, Args... args)
 {
     return format (1, fmt, args...);
 }

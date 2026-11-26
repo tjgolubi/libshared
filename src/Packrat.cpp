@@ -59,7 +59,7 @@ void Packrat::parse (const PEG& peg, const std::string& input)
     throw std::string ("Parse failed.");
 
   if (! pig.eos ())
-    throw format ("Parse failed - extra character at position {1}.", pig.cursor ());
+    throw format1 ("Parse failed - extra character at position {1}.", pig.cursor ());
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -81,7 +81,7 @@ void Packrat::external (
   bool (*fn)(Pig&, const std::shared_ptr <Tree>&))
 {
   if (_externals.find (rule) != _externals.end ())
-    throw format ("There is already an external parser defined for rule '{1}'.", rule);
+    throw format1 ("There is already an external parser defined for rule '{1}'.", rule);
 
   _externals[rule] = fn;
 }
@@ -330,7 +330,7 @@ bool Packrat::matchIntrinsic (
       auto b = std::make_shared <Tree> ();
       b->_name = "intrinsic";
       b->attribute ("expected", token._token);
-      b->attribute ("value", format ("{1}", digit));
+      b->attribute ("value", format1 ("{1}", digit));
       parseTree->addBranch (b);
 
       if (_debug > 1)
@@ -351,7 +351,7 @@ bool Packrat::matchIntrinsic (
       auto b = std::make_shared <Tree> ();
       b->_name = "intrinsic";
       b->attribute ("expected", token._token);
-      b->attribute ("value", format ("{1}", digit));
+      b->attribute ("value", format1 ("{1}", digit));
       parseTree->addBranch (b);
 
       if (_debug > 1)
@@ -372,7 +372,7 @@ bool Packrat::matchIntrinsic (
       auto b = std::make_shared <Tree> ();
       b->_name = "intrinsic";
       b->attribute ("expected", token._token);
-      b->attribute ("value", format ("{1}", character));
+      b->attribute ("value", format1 ("{1}", character));
       parseTree->addBranch (b);
 
       if (_debug > 1)
@@ -395,7 +395,7 @@ bool Packrat::matchIntrinsic (
       auto b = std::make_shared <Tree> ();
       b->_name = "intrinsic";
       b->attribute ("expected", token._token);
-      b->attribute ("value", format ("{1}", character));
+      b->attribute ("value", format1 ("{1}", character));
       parseTree->addBranch (b);
 
       if (_debug > 1)
@@ -418,7 +418,7 @@ bool Packrat::matchIntrinsic (
       auto b = std::make_shared <Tree> ();
       b->_name = "intrinsic";
       b->attribute ("expected", token._token);
-      b->attribute ("value", format ("{1}", character));
+      b->attribute ("value", format1 ("{1}", character));
       parseTree->addBranch (b);
 
       if (_debug > 1)
@@ -441,7 +441,7 @@ bool Packrat::matchIntrinsic (
       auto b = std::make_shared <Tree> ();
       b->_name = "intrinsic";
       b->attribute ("expected", token._token);
-      b->attribute ("value", format ("{1}", character));
+      b->attribute ("value", format1 ("{1}", character));
       parseTree->addBranch (b);
 
       if (_debug > 10)
@@ -464,7 +464,7 @@ bool Packrat::matchIntrinsic (
       auto b = std::make_shared <Tree> ();
       b->_name = "intrinsic";
       b->attribute ("expected", token._token);
-      b->attribute ("value", format ("{1}", character));
+      b->attribute ("value", format1 ("{1}", character));
       parseTree->addBranch (b);
 
       if (_debug > 1)
@@ -487,7 +487,7 @@ bool Packrat::matchIntrinsic (
       auto b = std::make_shared <Tree> ();
       b->_name = "intrinsic";
       b->attribute ("expected", token._token);
-      b->attribute ("value", format ("{1}", character));
+      b->attribute ("value", format1 ("{1}", character));
       parseTree->addBranch (b);
 
       if (_debug > 1)

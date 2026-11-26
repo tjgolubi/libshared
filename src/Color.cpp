@@ -176,7 +176,7 @@ Color::Color (const std::string& spec)
     {
       index = strtol (word.substr (4).c_str (), nullptr, 10);
       if (index < 0 || index > 23)
-        throw format ("The color '{1}' is not recognized.", word);
+        throw format1 ("The color '{1}' is not recognized.", word);
 
       if (bg)
       {
@@ -198,7 +198,7 @@ Color::Color (const std::string& spec)
       index = strtol (word.substr (3).c_str (), nullptr, 10);
       if (word.length () != 6 ||
           index < 0 || index > 555)
-        throw format ("The color '{1}' is not recognized.", word);
+        throw format1 ("The color '{1}' is not recognized.", word);
 
       int r = strtol (word.substr (3, 1).c_str (), nullptr, 10);
       int g = strtol (word.substr (4, 1).c_str (), nullptr, 10);
@@ -206,7 +206,7 @@ Color::Color (const std::string& spec)
       if (r < 0 || r > 5 ||
           g < 0 || g > 5 ||
           b < 0 || b > 5)
-        throw format ("The color '{1}' is not recognized.", word);
+        throw format1 ("The color '{1}' is not recognized.", word);
 
       index = 16 + r*36 + g*6 + b;
 
@@ -229,7 +229,7 @@ Color::Color (const std::string& spec)
     {
       index = strtol (word.substr (5).c_str (), nullptr, 10);
       if (index < 0 || index > 255)
-        throw format ("The color '{1}' is not recognized.", word);
+        throw format1 ("The color '{1}' is not recognized.", word);
 
       upgrade ();
 
@@ -252,7 +252,7 @@ Color::Color (const std::string& spec)
     {
       unsigned long int color = strtol (word.c_str (), nullptr, 16);
       if (color > 0x00FFFFFF)
-        throw format ("The color '{1}' is not recognized.", word);
+        throw format1 ("The color '{1}' is not recognized.", word);
 
       upgrade24b ();
 
@@ -269,7 +269,7 @@ Color::Color (const std::string& spec)
       }
     }
     else if (!word.empty ())
-      throw format ("The color '{1}' is not recognized.", word);
+      throw format1 ("The color '{1}' is not recognized.", word);
   }
 
   // Now combine the fg and bg into a single color.

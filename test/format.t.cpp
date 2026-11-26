@@ -57,19 +57,19 @@ int main (int, char**)
   t.is (format (1.23456789, 8, 8),      "1.2345679",    "format (1.23456789,    8,   8) -> 1.2345679");
   t.is (format (2444238.56789, 12, 11), "2444238.5679", "format (2444238.56789, 12, 11) -> 2444238.5679");
 
-  t.is (format ("pre {1} post",    "mid"),        "pre mid post",    "format 1a");
-  t.is (format ("pre {1}{1} post", "mid"),        "pre midmid post", "format 1b");
-  t.is (format ("pre {1} post",    0),            "pre 0 post",      "format 1c");
-  t.is (format ("pre {1}{1} post", 0),            "pre 00 post",     "format 1d");
+  t.is (format1 ("pre {1} post",    "mid"),        "pre mid post",    "format 1a");
+  t.is (format1 ("pre {1}{1} post", "mid"),        "pre midmid post", "format 1b");
+  t.is (format1 ("pre {1} post",    0),            "pre 0 post",      "format 1c");
+  t.is (format1 ("pre {1}{1} post", 0),            "pre 00 post",     "format 1d");
 
-  t.is (format ("pre {1}{2} post", "one", "two"), "pre onetwo post", "format 2a");
-  t.is (format ("pre {2}{1} post", "one", "two"), "pre twoone post", "format 2b");
-  t.is (format ("pre {1}{2} post", "one", 2),     "pre one2 post",   "format 2c");
-  t.is (format ("pre {1}{2} post", 1, "two"),     "pre 1two post",   "format 2d");
-  t.is (format ("pre {1}{2} post", 1, 2),         "pre 12 post",     "format 2e");
+  t.is (format1 ("pre {1}{2} post", "one", "two"), "pre onetwo post", "format 2a");
+  t.is (format1 ("pre {2}{1} post", "one", "two"), "pre twoone post", "format 2b");
+  t.is (format1 ("pre {1}{2} post", "one", 2),     "pre one2 post",   "format 2c");
+  t.is (format1 ("pre {1}{2} post", 1, "two"),     "pre 1two post",   "format 2d");
+  t.is (format1 ("pre {1}{2} post", 1, 2),         "pre 12 post",     "format 2e");
 
-  t.is (format ("pre {1}{2}{3} post", "one", "two", "three"), "pre onetwothree post", "format 3a");
-  t.is (format ("pre {3}{1}{2} post", "one", "two", "three"), "pre threeonetwo post", "format 3b");
+  t.is (format1 ("pre {1}{2}{3} post", "one", "two", "three"), "pre onetwothree post", "format 3a");
+  t.is (format1 ("pre {3}{1}{2} post", "one", "two", "three"), "pre threeonetwo post", "format 3b");
 
   // std::string leftJustify (const std::string&, const int);
   t.is (leftJustify (123, 3), "123",   "leftJustify 123,3 -> '123'");

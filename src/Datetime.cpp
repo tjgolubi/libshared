@@ -88,7 +88,7 @@ Datetime::Datetime (const std::string& input, const std::string& format)
   clear ();
   std::string::size_type start = 0;
   if (! parse (input, start, format))
-    throw ::format ("'{1}' is not a valid date in the '{2}' format.", input, format);
+    throw ::format1 ("'{1}' is not a valid date in the '{2}' format.", input, format);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -3393,7 +3393,7 @@ time_t Datetime::toEpoch () const
 ////////////////////////////////////////////////////////////////////////////////
 std::string Datetime::toEpochString () const
 {
-  return format ("{1}", _date);
+  return format1 ("{1}", _date);
 }
 
 ////////////////////////////////////////////////////////////////////////////////

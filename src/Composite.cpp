@@ -240,7 +240,7 @@ std::string Composite::str () const
         column_count += 2;
         break;
       default:  // Should not happen.
-        throw format ("Unexpected character width {1} of code point 0x{2}.", ch_width, formatHex (character));
+        throw format1 ("Unexpected character width {1} of code point 0x{2}.", ch_width, formatHex (character));
       }
 
       // Remember byte offset of first UTF-8 byte of next character in the layer text.

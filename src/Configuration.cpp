@@ -233,19 +233,19 @@ void Configuration::parse (
               }
             }
             if (!included.exists ())
-              throw format (
+              throw format1 (
                   "Could not find file in CWD, directory of config file or search paths '{1}'.",
                   included._data);
           }
           while (0);
 
           if (!included.readable ())
-            throw format ("Could not read include file '{1}'.", included._data);
+            throw format1 ("Could not read include file '{1}'.", included._data);
 
           load (included, nest + 1, search_paths);
         }
         else
-          throw format ("Malformed entry '{1}' in config file.", line);
+          throw format1 ("Malformed entry '{1}' in config file.", line);
       }
     }
   }
