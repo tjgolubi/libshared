@@ -39,11 +39,13 @@ std::string format (double);
 
 std::string leftJustify (const int, const int);
 std::string leftJustify (const std::string&, const int);
+std::string rightJustifyZero (const int, const int);
 std::string rightJustify (const int, const int);
 std::string rightJustify (const std::string&, const int);
 
 std::string commify (const std::string&);
 std::string formatBytes (size_t);
+std::string formatTime (time_t);
 std::string printable (const std::string&);
 std::string printable (char);
 

@@ -104,6 +104,14 @@ std::string leftJustify (const std::string& input, const int width)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+std::string rightJustifyZero (const int input, const int width)
+{
+  std::stringstream s;
+  s << std::setw (width) << std::setfill ('0') << input;
+  return s.str ();
+}
+
+////////////////////////////////////////////////////////////////////////////////
 std::string rightJustify (const int input, const int width)
 {
   std::stringstream s;
@@ -204,6 +212,29 @@ std::string formatBytes (size_t bytes)
   else                          snprintf (formatted, sizeof(formatted), "%d B",     (int)bytes);
 
   return commify (formatted);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Convert a quantity in seconds to a more readable format.
+std::string formatTime (time_t seconds)
+{
+  char formatted[24];
+  float days = (float) seconds / 86400.0;
+
+       if (seconds >= 86400 * 365) snprintf (formatted, sizeof(formatted), "%.1f y", (days / 365.0));
+  else if (seconds >= 86400 * 84)  snprintf (formatted, sizeof(formatted), "%1d mo", (int) (days / 30));
+  else if (seconds >= 86400 * 13)  snprintf (formatted, sizeof(formatted), "%d wk",  (int) (float) (days / 7.0));
+  else if (seconds >= 86400)       snprintf (formatted, sizeof(formatted), "%d d",   (int) days);
+  else if (seconds >= 3600)        snprintf (formatted, sizeof(formatted), "%d h",   (int) (seconds / 3600));
+  else if (seconds >= 60)          snprintf (formatted, sizeof(formatted), "%d m",   (int) (seconds / 60));
+  else if (seconds >= 1)           snprintf (formatted, sizeof(formatted), "%d s",   (int) seconds);
+#ifdef HAVE_STRLCPY
+  else                             strlcpy (formatted, "-", sizeof(formatted));
+#else
+  else                             strcpy (formatted, "-");
+#endif /* HAVE_STRLCPY */
+
+  return std::string (formatted);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
