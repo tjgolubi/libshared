@@ -235,18 +235,18 @@ void Configuration::parse (
             }
             if (!included.exists ())
               throw std::format (
-                  "Could not find file in CWD, directory of config file or search paths '{0}'.",
+                  "Could not find file in CWD, directory of config file or search paths '{}'.",
                   included._data);
           }
           while (0);
 
           if (!included.readable ())
-            throw std::format ("Could not read include file '{0}'.", included._data);
+            throw std::format ("Could not read include file '{}'.", included._data);
 
           load (included, nest + 1, search_paths);
         }
         else
-          throw std::format ("Malformed entry '{0}' in config file.", line);
+          throw std::format ("Malformed entry '{}' in config file.", line);
       }
     }
   }

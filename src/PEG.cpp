@@ -53,7 +53,7 @@ std::string PEG::Token::dump () const
 void PEG::loadFromFile (File& file)
 {
   if (! file.exists ())
-    throw std::format ("PEG file '{0}' not found.", file._data);
+    throw std::format ("PEG file '{}' not found.", file._data);
 
   std::string contents;
   file.read (contents);
@@ -308,7 +308,7 @@ std::vector <std::string> PEG::loadImports (const std::vector <std::string>& lin
         }
       }
       else
-        throw std::format ("Cannot import '{0}'", file._data);
+        throw std::format ("Cannot import '{}'", file._data);
     }
     else
     {
@@ -409,21 +409,21 @@ void PEG::validate () const
   // not in _rules.
   for (const auto& nd : notDefined)
     if (std::find (externals.begin (), externals.end (), nd) == externals.end ())
-      throw std::format ("Definition '{0}' referenced, but not defined.", nd);
+      throw std::format ("Definition '{}' referenced, but not defined.", nd);
 
   // Circular definitions - these are names in _rules that also appear as
   // the only token in any of the alternates for that definition.
   for (const auto& lr : allLeftRecursive)
-    throw std::format ("Definition '{0}' is left recursive.", lr);
+    throw std::format ("Definition '{}' is left recursive.", lr);
 
   for (const auto& r : allRules)
     if (r[0] == '<')
-      throw std::format ("Definition '{0}' may not redefine an intrinsic.", r);
+      throw std::format ("Definition '{}' may not redefine an intrinsic.", r);
 
   for (const auto& r : allRules)
     if (r[0] == '"' ||
         r[0] == '\'')
-      throw std::format ("Definition '{0}' may not be a literal.", r);
+      throw std::format ("Definition '{}' may not be a literal.", r);
 
   // Unused definitions - these are names in _rules that are never
   // referenced as token.
@@ -433,7 +433,7 @@ void PEG::validate () const
         nu != _start)
     {
       if (_strict)
-        throw std::format ("Definition '{0}' is defined, but not referenced.", nu);
+        throw std::format ("Definition '{}' is defined, but not referenced.", nu);
       else
         std::cout << "Warning: Definition '" << nu << "' is defined, but not referenced.\n";
     }
@@ -453,7 +453,7 @@ void PEG::validate () const
         intrinsic != "<token>"                 &&
         intrinsic.substr (0, 8)  != "<entity:" &&
         intrinsic.substr (0, 10) != "<external:")
-      throw std::format ("Specified intrinsic '{0}' is not supported.", intrinsic);
+      throw std::format ("Specified intrinsic '{}' is not supported.", intrinsic);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
