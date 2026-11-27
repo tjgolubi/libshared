@@ -25,7 +25,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include <Table.h>
-#include <iostream>
+#include <print>
 #include <test.h>
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -73,7 +73,7 @@ int main (int, char**)
                              "and not flaky tests.");
     t1.set (row, 2, "bottom right");
 
-    std::cout << t1.render ();
+    std::print ("{}", t1.render ());
     t.ok (t1.lines () > 4, "Table::lines > 4");
     
     // Test color behavior - with color enabled (default)
@@ -145,7 +145,7 @@ int main (int, char**)
       }
     }
 
-    std::cout << t2.render ();
+    std::print ("{}", t2.render ());
   }
 
   catch (const std::string& e)

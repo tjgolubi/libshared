@@ -27,7 +27,7 @@
 #include <FS.h>
 #include <JSON.h>
 #include <cstring>
-#include <iostream>
+#include <print>
 #include <string>
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -35,12 +35,10 @@ int main (int argc, char** argv)
 {
   if (argc == 1)
   {
-    std::cout << "\nUsage: json_test [-q] <file | JSON> ...\n"
-              << '\n'
-              << "      -q        quiet, no JSON dump\n"
-              << "      <file>    file containing JSON\n"
-              << "      <JSON>    JSON string, may need to be quoted\n"
-              << '\n';
+    std::println (
+        "\nUsage: json_test [-q] <file | JSON> ...\n\n      -q        quiet, no JSON "
+        "dump\n      <file>    file containing JSON\n      <JSON>    JSON string, may "
+        "need to be quoted\n");
     return 0;
   }
 
@@ -67,13 +65,13 @@ int main (int argc, char** argv)
           root = json::parse (argv[i]);
 
         if (root && !quiet)
-          std::cout << root->dump () << '\n';
+          std::println ("{}", root->dump ());
 
         delete root;
       }
 
-      catch (const std::string& e) { std::cout << e << '\n';         }
-      catch (...)                  { std::cout << "Unknown error\n"; }
+      catch (const std::string& e) { std::println ("{}", e);         }
+      catch (...)                  { std::println ("Unknown error"); }
     }
   }
 

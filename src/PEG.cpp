@@ -28,6 +28,7 @@
 #include <PEG.h>
 #include <format>
 #include <iostream>
+#include <print>
 #include <shared.h>
 #include <sstream>
 #include <utf8.h>
@@ -201,7 +202,7 @@ void PEG::loadFromString (const std::string& input)
   }
 
   if (_debug)
-    std::cout << dump ();
+    std::print (std::cout, "{}", dump ());
 
   // Validate the parsed grammar.
   validate ();
@@ -435,7 +436,7 @@ void PEG::validate () const
       if (_strict)
         throw std::format ("Definition '{}' is defined, but not referenced.", nu);
       else
-        std::cout << "Warning: Definition '" << nu << "' is defined, but not referenced.\n";
+        std::println (std::cout, "Warning: Definition '{}' is defined, but not referenced.", nu);
     }
   }
 

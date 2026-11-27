@@ -32,6 +32,7 @@
 #include <format.h>
 #include <iomanip>
 #include <iostream>
+#include <print>
 #include <shared.h>
 #include <sstream>
 #include <unicode.h>
@@ -3139,7 +3140,7 @@ bool Datetime::initializeNthDayInMonth (const std::vector <std::string>& tokens)
           auto month = Datetime::monthOfYear (tokens[3]);
           if (month != -1)
           {
-            std::cout << "# ordinal=" << ordinal << " day=" << day << " in month=" << month << '\n';
+            std::println (std::cout, "# ordinal={} day={} in month={}", ordinal, day, month);
 
             // TODO Assume 1st of the month
             // TODO Assume current year

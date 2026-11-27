@@ -25,6 +25,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include <shared.h>
+#include <print>
 #include <test.h>
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -250,7 +251,7 @@ int main (int, char**)
   text = "4444 333  ";
   offset = 0;
   while (extractLine (line, text, 9, true, offset))
-    std::cout << "# line '" << line << "' offset " << offset << "\n";
+    std::println ("# line '{}' offset {}", line, offset);
 */
 
   // std::vector <std::string> split (const std::string& input, const char delimiter)

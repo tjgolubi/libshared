@@ -26,7 +26,8 @@
 
 #include <Datetime.h>
 #include <ctime>
-#include <iostream>
+#include <cstdio>
+#include <print>
 #include <test.h>
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -109,7 +110,7 @@ int main (int, char**)
   local_now->tm_sec   = 0;
   local_now->tm_isdst = -1;
   time_t local = mktime (local_now);
-  std::cout << "# local midnight today " << local << '\n';
+  std::println ("# local midnight today {}", local);
 
   int year = 2013;
   int mo = 12;
@@ -120,22 +121,22 @@ int main (int, char**)
   local_now->tm_mday  = 6;
   local_now->tm_isdst = 0;
   time_t local6 = mktime (local_now);
-  std::cout << "# local midnight 2013-12-06 " << local6 << '\n';
+  std::println ("# local midnight 2013-12-06 {}", local6);
 
   local_now->tm_year  = f_yr - 1900;
   time_t f_local6 = mktime (local_now);
-  std::cout << "# future midnight 9850-12-06 " << f_local6 << '\n';
+  std::println ("# future midnight 9850-12-06 {}", f_local6);
 
   local_now->tm_year  = year - 1900;
   local_now->tm_mon   = mo - 1;
   local_now->tm_mday  = 1;
   local_now->tm_isdst = 0;
   time_t local1 = mktime (local_now);
-  std::cout << "# local midnight 2013-12-01 " << local1 << '\n';
+  std::println ("# local midnight 2013-12-01 {}", local1);
 
   local_now->tm_year  = f_yr - 1900;
   time_t f_local1 = mktime (local_now);
-  std::cout << "# future midnight 9850-12-01 " << f_local1 << '\n';
+  std::println ("# future midnight 9850-12-01 {}", f_local1);
 
   struct tm* utc_now = gmtime (&now);
   int utc_s = (utc_now->tm_hour * 3600) +
@@ -146,29 +147,29 @@ int main (int, char**)
   utc_now->tm_sec   = 0;
   utc_now->tm_isdst = -1;
   time_t utc = timegm (utc_now);
-  std::cout << "# utc midnight today " << utc << '\n';
+  std::println ("# utc midnight today {}", utc);
 
   utc_now->tm_year  = year - 1900;
   utc_now->tm_mon   = mo - 1;
   utc_now->tm_mday  = 6;
   utc_now->tm_isdst = 0;
   time_t utc6 = timegm (utc_now);
-  std::cout << "# utc midnight 2013-12-06 " << utc6 << '\n';
+  std::println ("# utc midnight 2013-12-06 {}", utc6);
 
   utc_now->tm_year  = f_yr - 1900;
   time_t f_utc6 = timegm (utc_now);
-  std::cout << "# future midnight 9850-12-06 " << f_utc6 << '\n';
+  std::println ("# future midnight 9850-12-06 {}", f_utc6);
 
   utc_now->tm_year  = year - 1900;
   utc_now->tm_mon   = mo - 1;
   utc_now->tm_mday  = 1;
   utc_now->tm_isdst = 0;
   time_t utc1 = timegm (utc_now);
-  std::cout << "# utc midnight 2013-12-01 " << utc1 << '\n';
+  std::println ("# utc midnight 2013-12-01 {}", utc1);
 
   utc_now->tm_year  = f_yr - 1900;
   time_t f_utc1 = timegm (utc_now);
-  std::cout << "# future midnight 9850-12-01 " << f_utc1 << '\n';
+  std::println ("# future midnight 9850-12-01 {}", f_utc1);
 
   int hms = (12 * 3600) + (34 * 60) + 56; // The time 12:34:56 in seconds.
   int hm  = (12 * 3600) + (34 * 60);      // The time 12:34:00 in seconds.
@@ -176,8 +177,8 @@ int main (int, char**)
 
   int ld = local_s > hms ? 86400 : 0;     // Local extra day if now > hms.
   int ud = utc_s   > hms ? 86400 : 0;     // UTC extra day if now > hms.
-  std::cout << "# ld " << ld << '\n';
-  std::cout << "# ud " << ud << '\n';
+  std::println ("# ld {}", ld);
+  std::println ("# ud {}", ud);
 
   int wks;
 
@@ -687,7 +688,8 @@ int main (int, char**)
 
     // Test for Y2038 problem
     Datetime f_epoch (2039, 1, 1);
-    std::cout << "# 2039-1-1 is " << (long long)f_epoch.toEpoch () << std::endl;
+    std::println ("# 2039-1-1 is {}", (long long)f_epoch.toEpoch ());
+    std::fflush (stdout);
     t.ok ((long long)f_epoch.toEpoch () > 2147483647, "9/01/2039 > 2,147,483,647");
 
     Datetime f_iso (2147483650);
@@ -939,7 +941,8 @@ int main (int, char**)
       Datetime::timeRelative = true;
 
       Datetime first ("1st");
-      std::cout << "actual (first - relative:true): " << first.toISO () << " now: " << now.toISO () << std::endl;
+      std::println ("actual (first - relative:true): {} now: {}", first.toISO (), now.toISO ());
+      std::fflush (stdout);
       if (now.day () >= 1)
         t.notok (first.sameMonth (now), "1st not in same month as now");
       else
@@ -947,7 +950,8 @@ int main (int, char**)
       t.is (first.day(), 1, "1st day is 1");
 
       Datetime second ("2nd");
-      std::cout << "actual (second - relative:true): " << second.toISO () << " now: " << now.toISO () << std::endl;
+      std::println ("actual (second - relative:true): {} now: {}", second.toISO (), now.toISO ());
+      std::fflush (stdout);
       if (now.day () >= 2)
         t.notok (second.sameMonth (now), "2nd not in same month as now");
       else
@@ -955,7 +959,8 @@ int main (int, char**)
       t.is (second.day(), 2, "2nd day is 2");
 
       Datetime third ("3rd");
-      std::cout << "actual (third - relative:true): " << third.toISO () << " now: " << now.toISO () << std::endl;
+      std::println ("actual (third - relative:true): {} now: {}", third.toISO (), now.toISO ());
+      std::fflush (stdout);
       if (now.day () >= 3)
         t.notok (third.sameMonth (now), "3rd not in same month as now");
       else
@@ -963,7 +968,8 @@ int main (int, char**)
       t.is (third.day(), 3, "3rd day is 3");
 
       Datetime fourth ("4th");
-      std::cout << "actual (fourth - relative:true): " << fourth.toISO () << " now: " << now.toISO () << std::endl;
+      std::println ("actual (fourth - relative:true): {} now: {}", fourth.toISO (), now.toISO ());
+      std::fflush (stdout);
       if (now.day () >= 4)
         t.notok (fourth.sameMonth (now), "4th not in same month as now");
       else
@@ -975,7 +981,8 @@ int main (int, char**)
       Datetime::timeRelative = false;
 
       Datetime first ("1st");
-      std::cout << "actual (first - relative:false): " << first.toISO () << " now: " << now.toISO () << std::endl;
+      std::println ("actual (first - relative:false): {} now: {}", first.toISO (), now.toISO ());
+      std::fflush (stdout);
       if (now.day () >= 1)
         t.ok (first.month() == now.month(), "1st in same month as now");
       else
@@ -983,7 +990,8 @@ int main (int, char**)
       t.is (first.day (), 1, "1st day is 1");
 
       Datetime second ("2nd");
-      std::cout << "actual (second - relative:false): " << second.toISO () << " now: " << now.toISO () << std::endl;
+      std::println ("actual (second - relative:false): {} now: {}", second.toISO (), now.toISO ());
+      std::fflush (stdout);
       if (now.day () >= 2)
         t.ok (second.month() == now.month(), "2nd in same month as now");
       else
@@ -991,7 +999,8 @@ int main (int, char**)
       t.is (second.day(), 2, "2nd day is 2");
 
       Datetime third ("3rd");
-      std::cout << "actual (third - relative:false): " << third.toISO () << " now: " << now.toISO () << std::endl;
+      std::println ("actual (third - relative:false): {} now: {}", third.toISO (), now.toISO ());
+      std::fflush (stdout);
       if (now.day () >= 3)
         t.ok (third.month() == now.month(), "3rd in same month as now");
       else
@@ -999,7 +1008,8 @@ int main (int, char**)
       t.is (third.day(), 3, "3rd day is 3");
 
       Datetime fourth ("4th");
-      std::cout << "actual (fourth - relative:false): " << fourth.toISO () << " now: " << now.toISO () << std::endl;
+      std::println ("actual (fourth - relative:false): {} now: {}", fourth.toISO (), now.toISO ());
+      std::fflush (stdout);
       if (now.day () >= 4)
         t.ok (fourth.month() == now.month(), "4th in same month as now");
       else

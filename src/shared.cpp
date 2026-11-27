@@ -33,6 +33,7 @@
 #include <cstring>
 #include <format.h>
 #include <iostream>
+#include <print>
 #include <shared.h>
 #include <sstream>
 #ifndef _WIN32
@@ -733,8 +734,8 @@ bool confirm (const std::string& question)
 
   do
   {
-    std::cout << question
-              << " (yes/no) ";
+    std::print (std::cout, "{} (yes/no) ", question);
+    std::cout.flush ();
 
     std::string answer;
     std::getline (std::cin, answer);
@@ -872,7 +873,7 @@ int execute (
 
     argv[args.size () + 1] = nullptr;
     int rc = execvp (executable.c_str (), argv);
-    std::cerr << "Failed to execute '" << executable << "' Error: " << strerror (errno) << '\n';
+    std::println (std::cerr, "Failed to execute '{}' Error: {}", executable, strerror (errno));
     _exit (rc);
   }
 

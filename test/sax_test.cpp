@@ -26,23 +26,23 @@
 
 #include <JSON.h>
 #include <fstream>
-#include <iostream>
+#include <print>
 #include <sstream>
 
 class EventSink : public json::SAX::Sink
 {
 public:
-  void eventObjectStart () override                         { std::cout << "# object start\n";                                 }
-  void eventObjectEnd (int count) override                  { std::cout << "# object end (" << count << " items)\n";           }
-  void eventArrayStart () override                          { std::cout << "# array start\n";                                  }
-  void eventArrayEnd (int count) override                   { std::cout << "# array end (" << count << " items)\n";            }
-  void eventName (const std::string& value) override        { std::cout << "# name '" << value << "'\n";                       }
-  void eventValueNull () override                           { std::cout << "# value 'null'\n";                                 }
-  void eventValueBool (bool value) override                 { std::cout << "# value '" << (value ? "true" : "false") << "'\n"; }
-  void eventValueInt (int64_t value) override               { std::cout << "# value '" << value << "'\n";                      }
-  void eventValueUint (uint64_t value) override             { std::cout << "# value '" << value << "'\n";                      }
-  void eventValueDouble (double value) override             { std::cout << "# value '" << value << "'\n";                      }
-  void eventValueString (const std::string& value) override { std::cout << "# value '" << value << "'\n";                      }
+  void eventObjectStart () override                         { std::println ("# object start"); }
+  void eventObjectEnd (int count) override                  { std::println ("# object end ({} items)", count); }
+  void eventArrayStart () override                          { std::println ("# array start"); }
+  void eventArrayEnd (int count) override                   { std::println ("# array end ({} items)", count); }
+  void eventName (const std::string& value) override        { std::println ("# name '{}'", value); }
+  void eventValueNull () override                           { std::println ("# value 'null'"); }
+  void eventValueBool (bool value) override                 { std::println ("# value '{}'", (value ? "true" : "false")); }
+  void eventValueInt (int64_t value) override               { std::println ("# value '{}'", value); }
+  void eventValueUint (uint64_t value) override             { std::println ("# value '{}'", value); }
+  void eventValueDouble (double value) override             { std::println ("# value '{:.6g}'", value); }
+  void eventValueString (const std::string& value) override { std::println ("# value '{}'", value); }
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -51,10 +51,7 @@ int main (int argc, char** argv)
   int status = 0;
   if (argc == 1)
   {
-    std::cout << "\nUsage: json2_test <file> ...\n"
-              << '\n'
-              << "      <file>    file containing JSON\n"
-              << '\n';
+    std::println ("\nUsage: json2_test <file> ...\n\n      <file>    file containing JSON\n");
   }
   else
   {
@@ -72,8 +69,8 @@ int main (int argc, char** argv)
           status = 1;
       }
 
-      catch (const std::string& e) { std::cout << e << '\n';         }
-      catch (...)                  { std::cout << "Unknown error\n"; }
+      catch (const std::string& e) { std::println ("{}", e);         }
+      catch (...)                  { std::println ("Unknown error"); }
     }
   }
 

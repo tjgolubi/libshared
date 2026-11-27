@@ -25,7 +25,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include <Lexer.h>
-#include <iostream>
+#include <print>
 #include <test.h>
 #include <vector>
 
@@ -57,7 +57,7 @@ int main (int, char**)
   tokens.clear ();
   while (l3.token (token, type))
   {
-    std::cout << "# «" << token << "» " << Lexer::typeName (type) << '\n';
+    std::println ("# «{}» {}", token, Lexer::typeName (type));
     tokens.emplace_back (token, type);
   }
 
