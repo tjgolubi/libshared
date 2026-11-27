@@ -30,7 +30,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 int main (int, char**)
 {
-  UnitTest t (47);
+  UnitTest t (49);
 
   // Grammar with no input.
   try
@@ -67,6 +67,28 @@ int main (int, char**)
     t.fail ("PEG: Grammar with left recursion");
   }
   catch (const std::string& e) { t.is (e, "Definition 'this' is left recursive.", "PEG: Grammar with left recursion"); }
+
+  try
+  {
+    PEG p;
+    p.loadFromString ("<digit>: 'a'");
+    t.fail ("PEG: Grammar redefines an intrinsic");
+  }
+  catch (const std::string& e)
+  {
+    t.is (e, "Definition '<digit>' may not redefine an intrinsic.", "PEG: Grammar redefines an intrinsic");
+  }
+
+  try
+  {
+    PEG p;
+    p.loadFromString ("\"literal: 'a'");
+    t.fail ("PEG: Grammar defines a literal");
+  }
+  catch (const std::string& e)
+  {
+    t.is (e, "Definition '\"literal' may not be a literal.", "PEG: Grammar defines a literal");
+  }
 
   // Grammar with unreferenced definition.
   try

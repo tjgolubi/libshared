@@ -417,12 +417,12 @@ void PEG::validate () const
 
   for (const auto& r : allRules)
     if (r[0] == '<')
-      throw format ("Definition '{1}' may not redefine an intrinsic.");
+      throw format ("Definition '{1}' may not redefine an intrinsic.", r);
 
   for (const auto& r : allRules)
     if (r[0] == '"' ||
         r[0] == '\'')
-      throw format ("Definition '{1}' may not be a literal.");
+      throw format ("Definition '{1}' may not be a literal.", r);
 
   // Unused definitions - these are names in _rules that are never
   // referenced as token.
