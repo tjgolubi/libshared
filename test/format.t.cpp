@@ -30,7 +30,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 int main (int, char**)
 {
-  UnitTest t (74);
+  UnitTest t (89);
 
   // std::string formatHex (int);
   t.is (formatHex (0),   "0",  "formatHex (0) -> 0");
@@ -72,6 +72,12 @@ int main (int, char**)
   t.is (rightJustify ("foo", 5), "  foo", "rightJustify foo,5 -> '  foo'");
   t.is (rightJustify ("föo", 5), "  föo", "rightJustify föo,5 -> '  föo'");
 
+  t.is (rightJustifyZero (123, 2), "123",   "rightJustifyZero preserves values wider than the field");
+  t.is (rightJustifyZero (123, 3), "123",   "rightJustifyZero preserves values that fit exactly");
+  t.is (rightJustifyZero (123, 5), "00123", "rightJustifyZero pads with leading zeroes");
+  t.is (rightJustifyZero (0, 3),   "000",   "rightJustifyZero pads zero");
+  t.is (rightJustifyZero (-12, 4), "0-12",  "rightJustifyZero pads before the minus sign");
+
   // std::string commify (const std::string& data)
   t.is (commify (""),           "",              "commify '' -> ''");
   t.is (commify ("1"),          "1",             "commify '1' -> '1'");
@@ -106,6 +112,17 @@ int main (int, char**)
   t.is (formatBytes (999999999),  "1.0 GiB", "999999999 -> 1.0 GiB");
   t.is (formatBytes (1000000000), "1.0 GiB", "1000000000 -> 1.0 GiB");
   t.is (formatBytes (1000000001), "1.0 GiB", "1000000001 -> 1.0 GiB");
+
+  t.is (formatTime (-1),          "-",     "formatTime renders negative durations as a dash");
+  t.is (formatTime (0),           "-",     "formatTime renders zero as a dash");
+  t.is (formatTime (1),           "1 s",   "formatTime renders one second");
+  t.is (formatTime (59),          "59 s",  "formatTime uses seconds below a minute");
+  t.is (formatTime (60),          "1 m",   "formatTime switches to minutes");
+  t.is (formatTime (3600),        "1 h",   "formatTime switches to hours");
+  t.is (formatTime (86400),       "1 d",   "formatTime switches to days");
+  t.is (formatTime (13 * 86400),  "1 wk",  "formatTime switches to weeks at 13 days");
+  t.is (formatTime (84 * 86400),  "2 mo",  "formatTime switches to months at 84 days");
+  t.is (formatTime (365 * 86400), "1.0 y", "formatTime switches to years at 365 days");
 
   // std::string printable (const std::string&);
   t.is (printable ("f\ro\no\tb\va\vr"), "f\\ro\\no\\tb\\va\\vr", "printable f\\ro\\no\\tb\\va\\vr --> f\\\\ro\\\\no\\\\tb\\\\va\\\\vr");

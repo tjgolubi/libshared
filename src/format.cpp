@@ -26,11 +26,15 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cmake.h>
 #include <cmath>
-#include <cstdio>
+#include <cstring>
 #include <format.h>
 #include <iomanip>
 #include <sstream>
+#ifndef _WIN32
+#include <strings.h>
+#endif
 #include <utf8.h>
 
 ////////////////////////////////////////////////////////////////////////////////
