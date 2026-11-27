@@ -32,12 +32,12 @@ int main (int, char**)
 {
   UnitTest t (77);
 
-  // std::string format (char);
-  t.is (format ('A'), "A", "format ('A') -> A");
+  // std::string tjgformat (char);
+  t.is (tjgformat ('A'), "A", "tjgformat ('A') -> A");
 
-  // std::string format (int);
-  t.is (format (0),  "0",  "format (0) -> 0");
-  t.is (format (-1), "-1", "format (-1) -> -1");
+  // std::string tjgformat (int);
+  t.is (tjgformat (0),  "0",  "tjgformat (0) -> 0");
+  t.is (tjgformat (-1), "-1", "tjgformat (-1) -> -1");
 
   // std::string formatHex (int);
   t.is (formatHex (0),   "0",  "formatHex (0) -> 0");

@@ -1055,7 +1055,7 @@ std::string cppCompliance ()
   else if (level == 202100 || level == 202302) return "C++23";
 
   // Unknown, just show the value.
-  else if (level >   99999) return ::format (level);
+  else if (level >   99999) return ::tjgformat (level);
 #endif
 
   // No C++.

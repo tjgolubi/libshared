@@ -569,9 +569,9 @@ void Color::_colorize (std::string &result, const std::string& input) const
     if (_value & _COLOR_24BIT)
     {
       result += "38;2;";
-      result += format((_value >> 16) & 0xFF) + ';';
-      result += format((_value >>  8) & 0xFF) + ';';
-      result += format((_value)       & 0xFF);
+      result += tjgformat((_value >> 16) & 0xFF) + ';';
+      result += tjgformat((_value >>  8) & 0xFF) + ';';
+      result += tjgformat((_value)       & 0xFF);
     }
     else if (_value & _COLOR_256)
     {
@@ -590,9 +590,9 @@ void Color::_colorize (std::string &result, const std::string& input) const
     if (_value & _COLOR_24BIT)
     {
       result += "48;2;";
-      result += format((_value >> 48) & 0xFF) + ';';
-      result += format((_value >> 40) & 0xFF) + ';';
-      result += format((_value >> 32) & 0xFF);
+      result += tjgformat((_value >> 48) & 0xFF) + ';';
+      result += tjgformat((_value >> 40) & 0xFF) + ';';
+      result += tjgformat((_value >> 32) & 0xFF);
     }
     else if (_value & _COLOR_256)
     {
@@ -663,18 +663,18 @@ std::string Color::code () const
     if (_value & _COLOR_HASFG)
     {
       result += "\033[38;2;";
-      result += format((_value >> 16) & 0xFF) + ';';
-      result += format((_value >>  8) & 0xFF) + ';';
-      result += format((_value)       & 0xFF);
+      result += tjgformat((_value >> 16) & 0xFF) + ';';
+      result += tjgformat((_value >>  8) & 0xFF) + ';';
+      result += tjgformat((_value)       & 0xFF);
       result += 'm';
     }
 
     if (_value & _COLOR_HASBG)
     {
       result += "\033[48;2;";
-      result += format((_value >> 48) & 0xFF) + ';';
-      result += format((_value >> 40) & 0xFF) + ';';
-      result += format((_value >> 32) & 0xFF);
+      result += tjgformat((_value >> 48) & 0xFF) + ';';
+      result += tjgformat((_value >> 40) & 0xFF) + ';';
+      result += tjgformat((_value >> 32) & 0xFF);
       result += 'm';
     }
   }

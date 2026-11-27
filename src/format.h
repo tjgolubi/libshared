@@ -81,7 +81,7 @@ std::string format (double, int, int);
 std::string format (double);
 
 template<typename T>
-const std::string format (T value)
+const std::string tjgformat (T value)
 {
     if constexpr (ostream_formattable<T>::value)
     {
@@ -92,7 +92,7 @@ const std::string format (T value)
     else
     {
         static_assert (ostream_formattable<T>::value,
-                       "::format<T> requires an ostream_formattable<T> specialization");
+                       "::tjgformat<T> requires an ostream_formattable<T> specialization");
         return {};
     }
 }
