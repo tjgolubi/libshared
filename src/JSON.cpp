@@ -25,6 +25,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include <JSON.h>
+#include <format>
 #include <format.h>
 #include <utf8.h>
 
@@ -229,7 +230,7 @@ json::array* json::array::parse (Pig& pig)
         else
         {
           delete arr;
-          throw format0 ("Error: missing value after ',' at position {0}", (int) pig.cursor ());
+          throw std::format ("Error: missing value after ',' at position {0}", (int) pig.cursor ());
         }
       }
     }
@@ -237,7 +238,7 @@ json::array* json::array::parse (Pig& pig)
     if (pig.skip (']'))
       return arr;
     else
-      throw format0 ("Error: missing ']' at position {0}", (int) pig.cursor ());
+      throw std::format ("Error: missing ']' at position {0}", (int) pig.cursor ());
 
     delete arr;
   }
@@ -309,7 +310,7 @@ json::object* json::object::parse (Pig& pig)
         else
         {
           delete obj;
-          throw format0 ("Error: missing value after ',' at position {0}", (int) pig.cursor ());
+          throw std::format ("Error: missing value after ',' at position {0}", (int) pig.cursor ());
         }
       }
     }
@@ -317,7 +318,7 @@ json::object* json::object::parse (Pig& pig)
     if (pig.skip ('}'))
       return obj;
     else
-      throw format0 ("Error: missing '}' at position {0}", (int) pig.cursor ());
+      throw std::format ("Error: missing '}}' at position {0}", (int) pig.cursor ());
 
     delete obj;
   }
@@ -343,10 +344,10 @@ bool json::object::parse_pair (
       if ((val = json::value::parse (pig)))
         return true;
       else
-        throw format0 ("Error: missing value at position {0}", (int) pig.cursor ());
+        throw std::format ("Error: missing value at position {0}", (int) pig.cursor ());
     }
     else
-      throw format0 ("Error: missing ':' at position {0}", (int) pig.cursor ());
+      throw std::format ("Error: missing ':' at position {0}", (int) pig.cursor ());
   }
 
   pig.restoreTo (checkpoint);
@@ -389,14 +390,14 @@ json::value* json::parse (const std::string& input)
        if (n.peek () == '{') root = json::object::parse (n);
   else if (n.peek () == '[') root = json::array::parse (n);
   else
-    throw format0 ("Error: expected '{' or '[' at position {0}", (int) n.cursor ());
+    throw std::format ("Error: expected '{{' or '[' at position {0}", (int) n.cursor ());
 
   // Check for end condition.
   n.skipWS ();
   if (!n.eos ())
   {
     delete root;
-    throw format0 ("Error: extra characters found at position {0}", (int) n.cursor ());
+    throw std::format ("Error: extra characters found at position {0}", (int) n.cursor ());
   }
 
   return root;

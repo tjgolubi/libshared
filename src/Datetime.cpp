@@ -28,6 +28,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdlib>
+#include <format>
 #include <format.h>
 #include <iomanip>
 #include <iostream>
@@ -88,7 +89,7 @@ Datetime::Datetime (const std::string& input, const std::string& format)
   clear ();
   std::string::size_type start = 0;
   if (! parse (input, start, format))
-    throw ::format0 ("'{0}' is not a valid date in the '{1}' format.", input, format);
+    throw std::format ("'{0}' is not a valid date in the '{1}' format.", input, format);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -3393,7 +3394,7 @@ time_t Datetime::toEpoch () const
 ////////////////////////////////////////////////////////////////////////////////
 std::string Datetime::toEpochString () const
 {
-  return format0 ("{0}", _date);
+  return std::format ("{0}", _date);
 }
 
 ////////////////////////////////////////////////////////////////////////////////

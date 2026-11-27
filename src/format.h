@@ -64,10 +64,7 @@ template<> struct ostream_formattable<std::wstring> : std::true_type {};
 
 #ifdef __cpp_lib_format
 template<typename T>
-  requires (ostream_formattable<T>::value &&
-            (std::is_class_v<T> || std::is_union_v<T> || std::is_enum_v<T>) &&
-            requires (std::ostream& out, const T& value) { out << value; })
-struct std::formatter<T, char> : std::formatter<std::string_view, char>
+struct ostream_formatter : std::formatter<std::string_view, char>
 {
   auto format (const T& value, auto& context) const
   {
@@ -82,8 +79,6 @@ std::string formatHex (int);
 std::string format (float, int, int);
 std::string format (double, int, int);
 std::string format (double);
-
-void replace_positional (std::string&, int, const std::string&);
 
 template<typename T>
 const std::string format (T value)
@@ -100,27 +95,6 @@ const std::string format (T value)
                        "::format<T> requires an ostream_formattable<T> specialization");
         return {};
     }
-}
-
-template<typename T>
-const std::string format (int fmt_num, const std::string& fmt, T arg)
-{
-    std::string output = fmt;
-    replace_positional (output, fmt_num, format (arg));
-    return output;
-}
-
-template<typename T, typename... Args>
-const std::string format (int fmt_num, const std::string& fmt, T arg, Args... args)
-{
-    const std::string fmt_replaced (format (fmt_num, fmt, arg));
-    return format (fmt_num+1, fmt_replaced, args...);
-}
-
-template<typename... Args>
-const std::string format0 (const std::string& fmt, Args... args)
-{
-    return format (0, fmt, args...);
 }
 
 std::string leftJustify (const int, const int);

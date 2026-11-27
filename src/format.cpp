@@ -92,65 +92,6 @@ std::string format (double value)
   return s.str ();
 }
 
-namespace {
-
-int count_occurrences(const std::string& searched_str,
-                      const std::string& search_for) noexcept
-{
-  if (search_for.empty())
-    return 0;
-
-  int count = 0;
-  std::string::size_type pos = 0;
-
-  while ((pos = searched_str.find(search_for, pos)) != std::string::npos) {
-    ++count;
-    pos += search_for.size();
-  }
-
-  return count;
-} // count_occurrences
-
-constexpr int count_positionals(std::string_view text) noexcept {
-  constexpr std::string_view digits = "0123456789";
-  int count = 0;
-
-  for (auto open = text.find('{'); open != text.npos;
-       open = text.find('{', open + 1))
-  {
-      const auto end = text.find_first_not_of(digits, open + 1);
-      if (end != text.npos && text[end] == '}')
-          ++count;
-  }
-
-  return count;
-} // count_positionals
-
-} // local
-
-////////////////////////////////////////////////////////////////////////////////
-void replace_positional (
-  std::string& fmt,
-  int positional,
-  const std::string& to)
-{
-  if (positional < 0 || positional > 100)
-    throw std::string ("replace_positional: positional index must be between 0 and 100");
-  if (count_positionals(to) != 0)
-    throw std::string ("replace_positional: recursive `to` argument");
-  auto from = "{" + std::to_string(positional) + "}";
-  auto count = count_occurrences(fmt, from);
-  auto before = count_positionals(fmt);
-  std::string::size_type pos = 0;
-  while ((pos = fmt.find (from, pos)) != std::string::npos)
-  {
-    fmt.replace (pos, from.length (), to);
-    pos += to.length ();
-  }
-  if (count_positionals(fmt) != before - count)
-    throw std::string ("replace_positional: weird case detected");
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 std::string leftJustify (const int input, const int width)
 {

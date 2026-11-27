@@ -26,6 +26,7 @@
 
 #include <Log.h>
 #include <cmake.h>
+#include <format>
 #include <format.h>
 #include <shared.h>
 
@@ -95,7 +96,7 @@ void Log::write (const std::string& category, const std::string& line)
         std::string message = Datetime ().toISO ()
                             + ' ' + PACKAGE_VERSION
                             + ' ' + category
-                            + ' ' + format0 ("(Repeated {0} times)", _repetition)
+                            + ' ' + std::format ("(Repeated {0} times)", _repetition)
                             + '\n';
 
         if (!_name.empty ())

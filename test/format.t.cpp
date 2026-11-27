@@ -57,52 +57,6 @@ int main (int, char**)
   t.is (format (1.23456789, 8, 8),      "1.2345679",    "format (1.23456789,    8,   8) -> 1.2345679");
   t.is (format (2444238.56789, 12, 11), "2444238.5679", "format (2444238.56789, 12, 11) -> 2444238.5679");
 
-  t.is (format0 ("pre {0} post", "mid"), "pre mid post", "format0 starts at zero");
-  t.is (format0 ("{0}{0}", "mid"), "midmid", "format0 repeats an argument");
-  t.is (format0 ("{2} {0} {1}", "one", 2, "three"), "three one 2",
-        "format0 reorders mixed argument types");
-  t.is (format0 ("{0} {1}", "one"), "one {1}", "format0 preserves an unmatched placeholder");
-
-  try
-  {
-    format0 ("{0}", "{1}", "done");
-    t.fail ("format0 rejects a placeholder in the argument");
-  }
-  catch (const std::string& error)
-  {
-    t.is (error, "replace_positional: recursive `to` argument",
-          "format0 rejects a placeholder in the argument");
-  }
-
-  try
-  {
-    format0 ("{{0}} {0}", "1", "done");
-    t.fail ("format0 rejects a placeholder formed by replacement");
-  }
-  catch (const std::string& error)
-  {
-    t.is (error, "replace_positional: weird case detected",
-          "format0 rejects a placeholder formed by replacement");
-  }
-
-  std::string pattern = "{100}";
-  replace_positional (pattern, 100, "last");
-  t.is (pattern, "last", "replace_positional accepts index 100");
-
-  for (int index : {-1, 101})
-  {
-    const std::string label = "replace_positional rejects index " + std::to_string (index);
-    try
-    {
-      replace_positional (pattern, index, "unused");
-      t.fail (label);
-    }
-    catch (const std::string& error)
-    {
-      t.is (error, "replace_positional: positional index must be between 0 and 100", label);
-    }
-  }
-
   // std::string leftJustify (const std::string&, const int);
   t.is (leftJustify (123, 3), "123",   "leftJustify 123,3 -> '123'");
   t.is (leftJustify (123, 4), "123 ",  "leftJustify 123,4 -> '123 '");

@@ -29,6 +29,7 @@
 #include <JSON.h>
 #include <cinttypes>
 #include <cstdlib>
+#include <format>
 #include <format.h>
 #include <shared.h>
 
@@ -233,19 +234,19 @@ void Configuration::parse (
               }
             }
             if (!included.exists ())
-              throw format0 (
+              throw std::format (
                   "Could not find file in CWD, directory of config file or search paths '{0}'.",
                   included._data);
           }
           while (0);
 
           if (!included.readable ())
-            throw format0 ("Could not read include file '{0}'.", included._data);
+            throw std::format ("Could not read include file '{0}'.", included._data);
 
           load (included, nest + 1, search_paths);
         }
         else
-          throw format0 ("Malformed entry '{0}' in config file.", line);
+          throw std::format ("Malformed entry '{0}' in config file.", line);
       }
     }
   }
