@@ -26,7 +26,6 @@
 
 #include <JSON.h>
 #include <format>
-#include <format.h>
 #include <utf8.h>
 
 const char *json_encode[] = {
@@ -145,7 +144,7 @@ json::jtype json::number::type ()
 ////////////////////////////////////////////////////////////////////////////////
 std::string json::number::dump () const
 {
-  return format (_dvalue);
+  return std::format ("{:.6f}", _dvalue);
 }
 
 ////////////////////////////////////////////////////////////////////////////////

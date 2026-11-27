@@ -26,7 +26,6 @@
 
 #include <Timer.h>
 #include <format>
-#include <format.h>
 #include <test.h>
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -50,17 +49,17 @@ int main (int, char**)
   t.ok (t0.total_us () >= t0.total_ms (), "Timer: more us than ms");
   t.ok (t0.total_ns () >= t0.total_us (), "Timer: more ns than us");
 
-  t.diag (std::format ("Total {} s",  ::format (t0.total_s ())));
-  t.diag (std::format ("Total {} ms", ::format (t0.total_ms ())));
-  t.diag (std::format ("Total {} μs", ::format (t0.total_us ())));
-  t.diag (std::format ("Total {} ns", ::format (t0.total_ns ())));
+  t.diag (std::format ("Total {:.6f} s",  t0.total_s ()));
+  t.diag (std::format ("Total {:.6f} ms", t0.total_ms ()));
+  t.diag (std::format ("Total {:.6f} μs", t0.total_us ()));
+  t.diag (std::format ("Total {:.6f} ns", t0.total_ns ()));
 
   Timer t2;
   t2.start ();
-  t.diag (std::format ("Running total {} s",  ::format (t2.total_s ())));
-  t.diag (std::format ("Running total {} ms", ::format (t2.total_ms ())));
-  t.diag (std::format ("Running total {} us", ::format (t2.total_us ())));
-  t.diag (std::format ("Running total {} ns", ::format (t2.total_ns ())));
+  t.diag (std::format ("Running total {:.6f} s",  t2.total_s ()));
+  t.diag (std::format ("Running total {:.6f} ms", t2.total_ms ()));
+  t.diag (std::format ("Running total {:.6f} us", t2.total_us ()));
+  t.diag (std::format ("Running total {:.6f} ns", t2.total_ns ()));
 
   return 0;
 }
