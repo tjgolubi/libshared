@@ -30,14 +30,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 int main (int, char**)
 {
-  UnitTest t (77);
-
-  // std::string tjgformat (char);
-  t.is (tjgformat ('A'), "A", "tjgformat ('A') -> A");
-
-  // std::string tjgformat (int);
-  t.is (tjgformat (0),  "0",  "tjgformat (0) -> 0");
-  t.is (tjgformat (-1), "-1", "tjgformat (-1) -> -1");
+  UnitTest t (74);
 
   // std::string formatHex (int);
   t.is (formatHex (0),   "0",  "formatHex (0) -> 0");

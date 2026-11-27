@@ -30,82 +30,20 @@
 #include <algorithm>
 #include <sstream>
 #include <string>
-#include <type_traits>
 #include <vector>
-
-#if __cplusplus >= 202002L || (defined (_MSVC_LANG) && _MSVC_LANG >= 202002L)
-#include <version>
-#endif
-
-#ifdef __cpp_lib_format
-#include <format>
-#include <string_view>
-#endif
-
-// Opt in to formatting through operator<<. Specialize beside program-defined types.
-template<typename T>
-struct ostream_formattable : std::false_type {};
-
-template<> struct ostream_formattable<char> : std::true_type {};
-template<> struct ostream_formattable<char*> : std::true_type {};
-template<> struct ostream_formattable<float> : std::true_type {};
-template<> struct ostream_formattable<int> : std::true_type {};
-template<> struct ostream_formattable<long> : std::true_type {};
-template<> struct ostream_formattable<long long> : std::true_type {};
-template<> struct ostream_formattable<unsigned int> : std::true_type {};
-template<> struct ostream_formattable<unsigned long> : std::true_type {};
-template<> struct ostream_formattable<unsigned long long> : std::true_type {};
-
-template<> struct ostream_formattable<const char*> : std::true_type {};
-template<> struct ostream_formattable<std::string_view> : std::true_type {};
-template<> struct ostream_formattable<std::wstring_view> : std::true_type {};
-template<> struct ostream_formattable<std::string> : std::true_type {};
-template<> struct ostream_formattable<std::wstring> : std::true_type {};
-
-#ifdef __cpp_lib_format
-template<typename T>
-struct ostream_formatter : std::formatter<std::string_view, char>
-{
-  auto format (const T& value, auto& context) const
-  {
-    std::ostringstream out;
-    out << value;
-    return std::formatter<std::string_view, char>::format (out.view (), context);
-  }
-};
-#endif
 
 std::string formatHex (int);
 std::string format (float, int, int);
 std::string format (double, int, int);
 std::string format (double);
 
-template<typename T>
-const std::string tjgformat (T value)
-{
-    if constexpr (ostream_formattable<T>::value)
-    {
-        std::stringstream s;
-        s << value;
-        return s.str ();
-    }
-    else
-    {
-        static_assert (ostream_formattable<T>::value,
-                       "::tjgformat<T> requires an ostream_formattable<T> specialization");
-        return {};
-    }
-}
-
 std::string leftJustify (const int, const int);
 std::string leftJustify (const std::string&, const int);
-std::string rightJustifyZero (const int, const int);
 std::string rightJustify (const int, const int);
 std::string rightJustify (const std::string&, const int);
 
 std::string commify (const std::string&);
 std::string formatBytes (size_t);
-std::string formatTime (time_t);
 std::string printable (const std::string&);
 std::string printable (char);
 
