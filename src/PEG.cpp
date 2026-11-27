@@ -27,9 +27,9 @@
 #include <Lexer.h>
 #include <PEG.h>
 #include <format>
-#include <format.h>
 #include <iostream>
 #include <shared.h>
+#include <sstream>
 #include <utf8.h>
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -418,12 +418,12 @@ void PEG::validate () const
 
   for (const auto& r : allRules)
     if (r[0] == '<')
-      throw tjgformat ("Definition '{1}' may not redefine an intrinsic.");
+      throw std::format ("Definition '{0}' may not redefine an intrinsic.", r);
 
   for (const auto& r : allRules)
     if (r[0] == '"' ||
         r[0] == '\'')
-      throw tjgformat ("Definition '{1}' may not be a literal.");
+      throw std::format ("Definition '{0}' may not be a literal.", r);
 
   // Unused definitions - these are names in _rules that are never
   // referenced as token.
