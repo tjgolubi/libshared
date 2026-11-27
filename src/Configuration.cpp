@@ -328,7 +328,7 @@ bool Configuration::getBoolean (const std::string& key, bool getFromContext) con
 ////////////////////////////////////////////////////////////////////////////////
 void Configuration::set (const std::string& key, const int value)
 {
-  (*this)[key] = tjgformat (value);
+  (*this)[key] = std::to_string (value);
   _dirty = true;
 }
 

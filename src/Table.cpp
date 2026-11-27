@@ -82,7 +82,7 @@ void Table::set (int row, int col, const std::string& value, const Color color)
 ////////////////////////////////////////////////////////////////////////////////
 void Table::set (int row, int col, int value, const Color color)
 {
-  std::string string_value = tjgformat (value);
+  std::string string_value = std::to_string (value);
   _data[row][col] = string_value;
 
   if (color.nontrivial ())

@@ -88,7 +88,7 @@ void Tree::attribute (const std::string& name, const std::string& value)
 // Accessor for attributes.
 void Tree::attribute (const std::string& name, const int value)
 {
-  _attributes[name] = tjgformat (value);
+  _attributes[name] = std::to_string (value);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
