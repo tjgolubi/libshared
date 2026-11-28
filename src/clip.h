@@ -28,7 +28,7 @@ struct clipped_arg {
   value_type value;
 };
 
-// With a width, reduce precision until the value fits, or fill with '*'.
+// With a width, reduce precision until the value fits or precision is zero.
 template<detail::clip_float value_type>
 [[nodiscard]] constexpr auto clipped(value_type value)
   -> clipped_arg<value_type> {

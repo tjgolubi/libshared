@@ -31,13 +31,17 @@
 ////////////////////////////////////////////////////////////////////////////////
 int main (int, char**)
 {
-  UnitTest t (94);
+  UnitTest t (96);
 
   using tjg::clipped;
   t.is(std::format("{:4.2f}", clipped(9.999)), "10.0",
        "clipped retries when rounding carries into the integer part");
-  t.is(std::format("{:4.2e}", clipped(125.0)), "****",
-       "clipped marks overflow when the exponent cannot fit");
+  t.is(std::format("{:4.2e}", clipped(125.0)), "1e+02",
+       "clipped keeps the exponent when the minimum precision cannot fit");
+  t.is(std::format("{:2.5g}", clipped(125.0)), "1e+02",
+       "clipped general presentation keeps one significant digit on overflow");
+  t.is(std::format("{:{}.2f}", clipped(9.999), 0), "10",
+       "clipped returns the minimum-precision value at width zero");
   t.is(std::format("{:5.6g}", clipped(1234567.0)), "1e+06",
        "clipped general presentation can switch to scientific notation");
   t.is(std::format("{:{}.{}f}/{}", clipped(9.999), 4, 2, "end"), "10.0/end",

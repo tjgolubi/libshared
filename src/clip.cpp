@@ -69,18 +69,16 @@ auto format_clipped(value_type value, const format_spec& spec,
     return render(value, spec, {}, spec.precision, locale);
   const int width = *spec.width;
   if (width == 0)
-    return {};
+    return render(value, spec, {}, 0, locale);
 
   const bool wide_fill = spec.fill_size > 1 &&
                          std::format("{:.1}", spec.fill()).empty();
-  const auto try_render = [&](std::optional<int> precision)
-    -> std::optional<std::string> {
-    auto text = render(value, spec, {}, precision, locale);
-    const auto columns = static_cast<std::size_t>(width);
-    if (text.size() > columns &&
-        (!spec.localized || std::format("{:.{}}", text, width) != text)) {
-      return std::nullopt;
-    }
+  const auto columns = static_cast<std::size_t>(width);
+  const auto fits = [&](const std::string& text) {
+    return text.size() <= columns ||
+           (spec.localized && std::format("{:.{}}", text, width) == text);
+  };
+  const auto pad = [&](std::string text, std::optional<int> precision) {
     if (wide_fill)
       return pad_wide_fill(text, spec, width);
     if (!spec.localized && text.size() == columns)
@@ -94,8 +92,9 @@ auto format_clipped(value_type value, const format_spec& spec,
   const bool hex = spec.type == 'a' || spec.type == 'A';
   int precision = spec.precision.value_or(6);
   if (!spec.precision && (spec.type == '\0' || hex)) {
-    if (auto result = try_render({}))
-      return std::move(*result);
+    auto text = render(value, spec, {}, {}, locale);
+    if (fits(text))
+      return pad(std::move(text), {});
     // Start with enough digits to preserve the value after trying shortest.
     precision = hex ? (limits::digits + 2) / 4 : limits::max_digits10;
   }
@@ -111,12 +110,13 @@ auto format_clipped(value_type value, const format_spec& spec,
     precision = std::min(precision, exact_digits);
   }
 
-  const int min_precision = general && precision != 0 ? 1 : 0;
-  for (; precision >= min_precision; --precision) {
-    if (auto result = try_render(precision))
-      return std::move(*result);
+  for (;; --precision) {
+    auto text = render(value, spec, {}, precision, locale);
+    if (fits(text))
+      return pad(std::move(text), precision);
+    if (precision == 0)
+      return text;
   }
-  return std::string(static_cast<std::size_t>(width), '*');
 }
 
 template auto format_clipped(float, const format_spec&, const std::locale&)
