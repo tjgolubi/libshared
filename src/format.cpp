@@ -25,25 +25,17 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include <algorithm>
-#include <cctype>
 #include <cmake.h>
 #include <cstring>
+#include <format>
 #include <format.h>
 #include <iomanip>
+#include <locale>
 #include <sstream>
 #ifndef _WIN32
 #include <strings.h>
 #endif
 #include <utf8.h>
-
-////////////////////////////////////////////////////////////////////////////////
-std::string formatHex (int value)
-{
-  std::stringstream s;
-  s.setf (std::ios::hex, std::ios::basefield);
-  s << value;
-  return s.str ();
-}
 
 ////////////////////////////////////////////////////////////////////////////////
 std::string leftJustify (const int input, const int width)
@@ -83,92 +75,29 @@ std::string rightJustify (const std::string& input, const int width)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-std::string commify (const std::string& data)
+namespace
 {
-  // First scan for decimal point and end of digits.
-  int decimalPoint = -1;
-  int end          = -1;
-
-  int i;
-  for (int i = 0; i < (int) data.length (); ++i)
-  {
-    if (isdigit (data[i]))
-      end = i;
-
-    if (data[i] == '.')
-      decimalPoint = i;
-  }
-
-  std::string result;
-  if (decimalPoint != -1)
-  {
-    // In reverse order, transfer all digits up to, and including the decimal
-    // point.
-    for (i = (int) data.length () - 1; i >= decimalPoint; --i)
-      result += data[i];
-
-    int consecutiveDigits = 0;
-    for (; i >= 0; --i)
-    {
-      if (isdigit (data[i]))
-      {
-        result += data[i];
-
-        if (++consecutiveDigits == 3 && i && isdigit (data[i - 1]))
-        {
-          result += ',';
-          consecutiveDigits = 0;
-        }
-      }
-      else
-        result += data[i];
-    }
-  }
-  else
-  {
-    // In reverse order, transfer all digits up to, but not including the last
-    // digit.
-    for (i = (int) data.length () - 1; i > end; --i)
-      result += data[i];
-
-    int consecutiveDigits = 0;
-    for (; i >= 0; --i)
-    {
-      if (isdigit (data[i]))
-      {
-        result += data[i];
-
-        if (++consecutiveDigits == 3 && i && isdigit (data[i - 1]))
-        {
-          result += ',';
-          consecutiveDigits = 0;
-        }
-      }
-      else
-        result += data[i];
-    }
-  }
-
-  // reverse result into data.
-  std::string done;
-  for (int i = (int) result.length () - 1; i >= 0; --i)
-    done += result[i];
-
-  return done;
-}
+class byte_grouping : public std::numpunct<char>
+{
+  char do_decimal_point () const override { return '.'; }
+  char do_thousands_sep () const override { return ','; }
+  std::string do_grouping () const override { return "\3"; }
+};
+} // namespace
 
 ////////////////////////////////////////////////////////////////////////////////
 // Convert a quantity in bytes to a more readable format.
 std::string formatBytes (size_t bytes)
 {
-  char formatted[24];
+  if (bytes < 995)
+    return std::format ("{} B", bytes);
 
-       if (bytes >=  995000000) snprintf (formatted, sizeof(formatted), "%.1f GiB", bytes / 1000000000.0);
-  else if (bytes >=     995000) snprintf (formatted, sizeof(formatted), "%.1f MiB", bytes /    1000000.0);
-  else if (bytes >=        995) snprintf (formatted, sizeof(formatted), "%.1f KiB", bytes /       1000.0);
-  else                          snprintf (formatted, sizeof(formatted), "%d B",     (int)bytes);
-
-  return commify (formatted);
+  static const std::locale grouped {std::locale::classic (), new byte_grouping};
+  if (bytes >= 995000000)
+    return std::format (grouped, "{:.1Lf} GiB", bytes / 1000000000.0);
+  if (bytes >= 995000)
+    return std::format (grouped, "{:.1Lf} MiB", bytes / 1000000.0);
+  return std::format (grouped, "{:.1Lf} KiB", bytes / 1000.0);
 }
 
 ////////////////////////////////////////////////////////////////////////////////

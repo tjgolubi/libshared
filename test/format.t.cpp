@@ -31,7 +31,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 int main (int, char**)
 {
-  UnitTest t (96);
+  UnitTest t (79);
 
   using tjg::clipped;
   t.is(std::format("{:4.2f}", clipped(9.999)), "10.0",
@@ -48,11 +48,6 @@ int main (int, char**)
        "clipped resolves dynamic fields without consuming the next argument");
   t.is(std::format("{:界>7.2f}", clipped(1.5)), "界 1.50",
        "clipped counts wide fill characters as two display columns");
-
-  // std::string formatHex (int);
-  t.is (formatHex (0),   "0",  "formatHex (0) -> 0");
-  t.is (formatHex (10),  "a",  "formatHex (10) -> a");
-  t.is (formatHex (123), "7b", "formatHex (123) -> 7b");
 
   t.is(std::format("{:8.4g}", clipped(0.12345678)), "  0.1235",
        "clipped displays four significant digits below one");
@@ -103,24 +98,6 @@ int main (int, char**)
   t.is (rightJustifyZero (0, 3),   "000",   "rightJustifyZero pads zero");
   t.is (rightJustifyZero (-12, 4), "0-12",  "rightJustifyZero pads before the minus sign");
 
-  // std::string commify (const std::string& data)
-  t.is (commify (""),           "",              "commify '' -> ''");
-  t.is (commify ("1"),          "1",             "commify '1' -> '1'");
-  t.is (commify ("12"),         "12",            "commify '12' -> '12'");
-  t.is (commify ("123"),        "123",           "commify '123' -> '123'");
-  t.is (commify ("1234"),       "1,234",         "commify '1234' -> '1,234'");
-  t.is (commify ("12345"),      "12,345",        "commify '12345' -> '12,345'");
-  t.is (commify ("123456"),     "123,456",       "commify '123456' -> '123,456'");
-  t.is (commify ("1234567"),    "1,234,567",     "commify '1234567' -> '1,234,567'");
-  t.is (commify ("12345678"),   "12,345,678",    "commify '12345678' -> '12,345,678'");
-  t.is (commify ("123456789"),  "123,456,789",   "commify '123456789' -> '123,456,789'");
-  t.is (commify ("1234567890"), "1,234,567,890", "commify '1234567890' -> '1,234,567,890'");
-
-  t.is (commify ("pre"),         "pre",          "commify 'pre' -> 'pre'");
-  t.is (commify ("pre1234"),     "pre1,234",     "commify 'pre1234' -> 'pre1,234'");
-  t.is (commify ("1234post"),    "1,234post",    "commify '1234post' -> '1,234post'");
-  t.is (commify ("pre1234post"), "pre1,234post", "commify 'pre1234post' -> 'pre1,234post'");
-
   // std::string formatBytes (size_t);
   t.is (formatBytes (0), "0 B", "0 -> 0 B");
 
@@ -137,6 +114,12 @@ int main (int, char**)
   t.is (formatBytes (999999999),  "1.0 GiB", "999999999 -> 1.0 GiB");
   t.is (formatBytes (1000000000), "1.0 GiB", "1000000000 -> 1.0 GiB");
   t.is (formatBytes (1000000001), "1.0 GiB", "1000000001 -> 1.0 GiB");
+
+  if constexpr (sizeof (size_t) >= 8)
+    t.is (formatBytes (static_cast<size_t> (12345600000000ULL)), "12,345.6 GiB",
+          "formatBytes groups thousands in the scaled value");
+  else
+    t.skip ("formatBytes grouping requires a byte count above 32 bits");
 
   t.is (formatTime (-1),          "-",     "formatTime renders negative durations as a dash");
   t.is (formatTime (0),           "-",     "formatTime renders zero as a dash");
