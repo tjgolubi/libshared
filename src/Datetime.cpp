@@ -27,6 +27,7 @@
 #include <Datetime.h>
 #include <algorithm>
 #include <cassert>
+#include <chrono>
 #include <cstdlib>
 #include <format>
 #include <format.h>
@@ -37,6 +38,127 @@
 #include <sstream>
 #include <unicode.h>
 #include <utf8.h>
+#include <utility>
+
+namespace chrono = std::chrono;
+
+namespace
+{
+constexpr auto from_epoch (time_t value) -> chrono::sys_seconds
+{
+  return chrono::sys_seconds{chrono::seconds{value}};
+}
+
+constexpr auto to_epoch (chrono::sys_seconds value) -> time_t
+{
+  const auto seconds = value.time_since_epoch ().count ();
+  return std::in_range<time_t> (seconds) ? static_cast<time_t> (seconds) : -1;
+}
+
+auto now_seconds () -> chrono::sys_seconds
+{
+  return chrono::floor<chrono::seconds> (chrono::system_clock::now ());
+}
+
+// Count from the first of the month to normalize dates such as January 32.
+constexpr auto calendar_day (chrono::year_month month, int day)
+  -> chrono::local_days
+{
+  return chrono::local_days{month / 1} + chrono::days{day - 1};
+}
+
+constexpr auto calendar_day (int year, int month, int day) -> chrono::local_days
+{
+  return calendar_day (chrono::year{year} / chrono::January +
+                       chrono::months{month - 1}, day);
+}
+
+// Use the platform timezone so TZ strings and mktime's DST rules still apply.
+auto local_fields (time_t value) -> std::tm
+{
+  std::tm fields {};
+#ifdef _WIN32
+  if (localtime_s (&fields, &value) != 0)
+#else
+  tzset ();
+  if (localtime_r (&value, &fields) == nullptr)
+#endif
+    throw std::string ("Timestamp is outside the local time range.");
+  return fields;
+}
+
+auto local_time (const std::tm& fields) -> chrono::local_seconds
+{
+  return calendar_day (fields.tm_year + 1900, fields.tm_mon + 1, fields.tm_mday)
+       + chrono::hours{fields.tm_hour} + chrono::minutes{fields.tm_min}
+       + chrono::seconds{fields.tm_sec};
+}
+
+auto local_time (time_t value) -> chrono::local_seconds
+{
+  return local_time (local_fields (value));
+}
+
+auto local_day (time_t value) -> chrono::local_days
+{
+  return chrono::floor<chrono::days> (local_time (value));
+}
+
+auto local_clock (time_t value) -> chrono::hh_mm_ss<chrono::seconds>
+{
+  const auto local = local_time (value);
+  return chrono::hh_mm_ss{local - chrono::floor<chrono::days> (local)};
+}
+
+auto local_epoch (chrono::local_seconds value, int is_dst = -1) -> time_t
+{
+  const auto day = chrono::floor<chrono::days> (value);
+  const auto date = chrono::year_month_day{day};
+  const auto clock = chrono::hh_mm_ss{value - day};
+  std::tm fields {};
+  fields.tm_year  = int(date.year ()) - 1900;
+  fields.tm_mon   = int(unsigned(date.month ())) - 1;
+  fields.tm_mday  = int(unsigned(date.day ()));
+  fields.tm_hour  = clock.hours ().count ();
+  fields.tm_min   = clock.minutes ().count ();
+  fields.tm_sec   = clock.seconds ().count ();
+  fields.tm_isdst = is_dst;
+  return std::mktime (&fields);
+}
+
+auto today () -> chrono::local_days
+{
+  return local_day (to_epoch (now_seconds ()));
+}
+
+auto monday_of (chrono::local_days day) -> chrono::local_days
+{
+  return day - (chrono::weekday{day} - chrono::Monday);
+}
+
+auto month_start (int offset) -> chrono::local_days
+{
+  const auto date = chrono::year_month_day{today ()};
+  const auto month = date.year () / date.month () + chrono::months{offset};
+  return chrono::local_days{month / 1};
+}
+
+auto quarter_start (int offset) -> chrono::local_days
+{
+  const auto date = chrono::year_month_day{today ()};
+  const auto first = chrono::January +
+    chrono::months{(int(unsigned(date.month ())) - 1) / 3 * 3};
+  const auto month = date.year () / first + chrono::months{offset * 3};
+  return chrono::local_days{month / 1};
+}
+
+auto year_start (int offset) -> chrono::local_days
+{
+  const auto year = chrono::year_month_day{today ()}.year () +
+                    chrono::years{offset};
+  return chrono::local_days{year / chrono::January / 1};
+}
+} // namespace
 
 static std::vector <std::string> dayNames {
   "sunday",
@@ -81,7 +203,7 @@ bool Datetime::timeRelative = true;
 Datetime::Datetime ()
 {
   clear ();
-  _date = time (nullptr);
+  _date = to_epoch (now_seconds ());
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -110,14 +232,7 @@ Datetime::Datetime (const int y, const int m, const int d)
 
   clear ();
 
-  // Error if not valid.
-  struct tm t {};
-  t.tm_isdst = -1;   // Requests that mktime determine summer time effect.
-  t.tm_mday  = d;
-  t.tm_mon   = m - 1;
-  t.tm_year  = y - 1900;
-
-  _date = mktime (&t);
+  _date = local_epoch (calendar_day (y, m, d));
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -134,17 +249,9 @@ Datetime::Datetime (const int y,  const int m,  const int d,
 
   clear ();
 
-  // Error if not valid.
-  struct tm t {};
-  t.tm_isdst = -1;   // Requests that mktime determine summer time effect.
-  t.tm_mday  = d;
-  t.tm_mon   = m - 1;
-  t.tm_year  = y - 1900;
-  t.tm_hour  = hr;
-  t.tm_min   = mi;
-  t.tm_sec   = se;
-
-  _date = mktime (&t);
+  _date = local_epoch (calendar_day (y, m, d)
+                     + chrono::hours{hr} + chrono::minutes{mi}
+                     + chrono::seconds{se});
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1418,7 +1525,7 @@ bool Datetime::initializeNow (Pig& pig)
     if (! unicodeLatinAlpha (following) &&
         ! unicodeLatinDigit (following))
     {
-      _date = time (nullptr);
+      _date = to_epoch (now_seconds ());
       return true;
     }
   }
@@ -1441,13 +1548,7 @@ bool Datetime::initializeYesterday (Pig& pig)
     if (! unicodeLatinAlpha (following) &&
         ! unicodeLatinDigit (following))
     {
-      time_t now = time (nullptr);
-      struct tm* t = localtime (&now);
-
-      t->tm_hour = t->tm_min = t->tm_sec = 0;
-      t->tm_isdst = -1;
-      t->tm_mday -= 1;
-      _date = mktime (t);
+      _date = local_epoch (today () - chrono::days{1});
       return true;
     }
   }
@@ -1470,12 +1571,7 @@ bool Datetime::initializeToday (Pig& pig)
     if (! unicodeLatinAlpha (following) &&
         ! unicodeLatinDigit (following))
     {
-      time_t now = time (nullptr);
-      struct tm* t = localtime (&now);
-
-      t->tm_hour = t->tm_min = t->tm_sec = 0;
-      t->tm_isdst = -1;
-      _date = mktime (t);
+      _date = local_epoch (today ());
 
       return true;
     }
@@ -1499,13 +1595,7 @@ bool Datetime::initializeTomorrow (Pig& pig)
     if (! unicodeLatinAlpha (following) &&
         ! unicodeLatinDigit (following))
     {
-      time_t now = time (nullptr);
-      struct tm* t = localtime (&now);
-
-      t->tm_mday++;
-      t->tm_hour = t->tm_min = t->tm_sec = 0;
-      t->tm_isdst = -1;
-      _date = mktime (t);
+      _date = local_epoch (today () + chrono::days{1});
       return true;
     }
   }
@@ -1543,37 +1633,16 @@ bool Datetime::initializeOrdinal (Pig& pig)
             remainder1 == 0 ||
             remainder1 > 3) && character1 == 't' && character2 == 'h'))
       {
-        time_t now = time (nullptr);
-        struct tm* t = localtime (&now);
+        const auto date = chrono::year_month_day{today ()};
+        auto month = date.year () / date.month ();
+        const int day = unsigned(date.day ());
+        if (timeRelative && number <= day)
+          month += chrono::months{1};
+        else if (!timeRelative && day < number &&
+                 number <= unsigned((month / chrono::last).day ()))
+          month -= chrono::months{1};
 
-        int y = t->tm_year + 1900;
-        int m = t->tm_mon + 1;
-        int d = t->tm_mday;
-
-        if (timeRelative && (1 <= number && number <= d))
-        {
-          if (++m > 12)
-          {
-            m = 1;
-            y++;
-          }
-        }
-        else if (!timeRelative && (d < number && number <= daysInMonth (y, m)))
-        {
-          if (--m < 1)
-          {
-            m = 12;
-            y--;
-          }
-        }
-
-        t->tm_hour = t->tm_min = t->tm_sec = 0;
-        t->tm_mon  = m - 1;
-        t->tm_mday = number;
-        t->tm_year = y - 1900;
-        t->tm_isdst = -1;
-
-        _date = mktime (t);
+        _date = local_epoch (calendar_day (month, static_cast<int> (number)));
 
         return true;
       }
@@ -1602,21 +1671,15 @@ bool Datetime::initializeDayName (Pig& pig)
           following != ':' &&
           following != '=')
       {
-        time_t now = time (nullptr);
-        struct tm* t = localtime (&now);
+        const auto current = today ();
+        const int weekday = chrono::weekday{current}.c_encoding ();
+        auto offset = chrono::days{day - weekday};
+        if (weekday >= day && timeRelative)
+          offset += chrono::weeks{1};
+        else if (weekday < day && !timeRelative)
+          offset -= chrono::weeks{1};
 
-        if (t->tm_wday >= day)
-        {
-          t->tm_mday += day - t->tm_wday + (timeRelative ? 7 : 0);
-        }
-        else
-        {
-          t->tm_mday += day - t->tm_wday - (timeRelative ? 0 : 7);
-        }
-
-        t->tm_hour = t->tm_min = t->tm_sec = 0;
-        t->tm_isdst = -1;
-        _date = mktime (t);
+        _date = local_epoch (current + offset);
         return true;
       }
     }
@@ -1645,19 +1708,12 @@ bool Datetime::initializeMonthName (Pig& pig)
           following != ':' &&
           following != '=')
       {
-        time_t now = time (nullptr);
-        struct tm* t = localtime (&now);
-
-        if (t->tm_mon >= month && timeRelative)
-        {
-          t->tm_year++;
-        }
-
-        t->tm_mon = month;
-        t->tm_mday = 1;
-        t->tm_hour = t->tm_min = t->tm_sec = 0;
-        t->tm_isdst = -1;
-        _date = mktime (t);
+        const auto date = chrono::year_month_day{today ()};
+        auto year = date.year ();
+        const auto target = chrono::January + chrono::months{month};
+        if (date.month () >= target && timeRelative)
+          year += chrono::years{1};
+        _date = local_epoch (chrono::local_days{year / target / 1});
         return true;
       }
     }
@@ -1688,15 +1744,7 @@ bool Datetime::initializeLater (Pig& pig)
     if (! unicodeLatinAlpha (following) &&
         ! unicodeLatinDigit (following))
     {
-      time_t now = time (nullptr);
-      struct tm* t = localtime (&now);
-
-      t->tm_hour = t->tm_min = t->tm_sec = 0;
-      t->tm_year = 8099;  // Year 9999
-      t->tm_mon = 11;
-      t->tm_mday = 30;
-      t->tm_isdst = -1;
-      _date = mktime (t);
+      _date = local_epoch (calendar_day (9999, 12, 30));
       return true;
     }
   }
@@ -1717,13 +1765,7 @@ bool Datetime::initializeSopd (Pig& pig)
     if (! unicodeLatinAlpha (following) &&
         ! unicodeLatinDigit (following))
     {
-      time_t now = time (nullptr);
-      struct tm* t = localtime (&now);
-
-      t->tm_hour = t->tm_min = t->tm_sec = 0;
-      t->tm_isdst = -1;
-      t->tm_mday -= 1;
-      _date = mktime (t);
+      _date = local_epoch (today () - chrono::days{1});
       return true;
     }
   }
@@ -1744,12 +1786,7 @@ bool Datetime::initializeSod (Pig& pig)
     if (! unicodeLatinAlpha (following) &&
         ! unicodeLatinDigit (following))
     {
-      time_t now = time (nullptr);
-      struct tm* t = localtime (&now);
-
-      t->tm_hour = t->tm_min = t->tm_sec = 0;
-      t->tm_isdst = -1;
-      _date = mktime (t);
+      _date = local_epoch (today ());
       return true;
     }
   }
@@ -1770,13 +1807,7 @@ bool Datetime::initializeSond (Pig& pig)
     if (! unicodeLatinAlpha (following) &&
         ! unicodeLatinDigit (following))
     {
-      time_t now = time (nullptr);
-      struct tm* t = localtime (&now);
-
-      t->tm_mday++;
-      t->tm_hour = t->tm_min = t->tm_sec = 0;
-      t->tm_isdst = -1;
-      _date = mktime (t);
+      _date = local_epoch (today () + chrono::days{1});
       return true;
     }
   }
@@ -1797,13 +1828,7 @@ bool Datetime::initializeEopd (Pig& pig)
     if (! unicodeLatinAlpha (following) &&
         ! unicodeLatinDigit (following))
     {
-      time_t now = time (nullptr);
-      struct tm* t = localtime (&now);
-
-      t->tm_hour = t->tm_min = 0;
-      t->tm_sec = -1;
-      t->tm_isdst = -1;
-      _date = mktime (t);
+      _date = local_epoch (today () - chrono::seconds{1});
       return true;
     }
   }
@@ -1824,14 +1849,7 @@ bool Datetime::initializeEod (Pig& pig)
     if (! unicodeLatinAlpha (following) &&
         ! unicodeLatinDigit (following))
     {
-      time_t now = time (nullptr);
-      struct tm* t = localtime (&now);
-
-      t->tm_mday++;
-      t->tm_hour = t->tm_min = 0;
-      t->tm_sec = -1;
-      t->tm_isdst = -1;
-      _date = mktime (t);
+      _date = local_epoch (today () + chrono::days{1} - chrono::seconds{1});
       return true;
     }
   }
@@ -1852,14 +1870,7 @@ bool Datetime::initializeEond (Pig& pig)
     if (! unicodeLatinAlpha (following) &&
         ! unicodeLatinDigit (following))
     {
-      time_t now = time (nullptr);
-      struct tm* t = localtime (&now);
-
-      t->tm_mday += 2;
-      t->tm_hour = t->tm_min = 0;
-      t->tm_sec = -1;
-      t->tm_isdst = -1;
-      _date = mktime (t);
+      _date = local_epoch (today () + chrono::days{2} - chrono::seconds{1});
       return true;
     }
   }
@@ -1880,16 +1891,7 @@ bool Datetime::initializeSopw (Pig& pig)
     if (! unicodeLatinAlpha (following) &&
         ! unicodeLatinDigit (following))
     {
-      time_t now = time (nullptr);
-      struct tm* t = localtime (&now);
-      t->tm_hour = t->tm_min = t->tm_sec = 0;
-
-      int extra = (t->tm_wday + 6) % 7;
-      t->tm_mday -= extra;
-      t->tm_mday -= 7;
-
-      t->tm_isdst = -1;
-      _date = mktime (t);
+      _date = local_epoch (monday_of (today ()) - chrono::weeks{1});
       return true;
     }
   }
@@ -1910,15 +1912,7 @@ bool Datetime::initializeSow (Pig& pig)
     if (! unicodeLatinAlpha (following) &&
         ! unicodeLatinDigit (following))
     {
-      time_t now = time (nullptr);
-      struct tm* t = localtime (&now);
-      t->tm_hour = t->tm_min = t->tm_sec = 0;
-
-      int extra = (t->tm_wday + 6) % 7;
-      t->tm_mday -= extra;
-
-      t->tm_isdst = -1;
-      _date = mktime (t);
+      _date = local_epoch (monday_of (today ()));
       return true;
     }
   }
@@ -1939,16 +1933,7 @@ bool Datetime::initializeSonw (Pig& pig)
     if (! unicodeLatinAlpha (following) &&
         ! unicodeLatinDigit (following))
     {
-      time_t now = time (nullptr);
-      struct tm* t = localtime (&now);
-      t->tm_hour = t->tm_min = t->tm_sec = 0;
-
-      int extra = (t->tm_wday + 6) % 7;
-      t->tm_mday -= extra;
-      t->tm_mday += 7;
-
-      t->tm_isdst = -1;
-      _date = mktime (t);
+      _date = local_epoch (monday_of (today ()) + chrono::weeks{1});
       return true;
     }
   }
@@ -1969,16 +1954,7 @@ bool Datetime::initializeEopw (Pig& pig)
     if (! unicodeLatinAlpha (following) &&
         ! unicodeLatinDigit (following))
     {
-      time_t now = time (nullptr);
-      struct tm* t = localtime (&now);
-      t->tm_hour = t->tm_min = 0;
-      t->tm_sec = -1;
-
-      int extra = (t->tm_wday + 6) % 7;
-      t->tm_mday -= extra;
-
-      t->tm_isdst = -1;
-      _date = mktime (t);
+      _date = local_epoch (monday_of (today ()) - chrono::seconds{1});
       return true;
     }
   }
@@ -1999,17 +1975,8 @@ bool Datetime::initializeEow (Pig& pig)
     if (! unicodeLatinAlpha (following) &&
         ! unicodeLatinDigit (following))
     {
-      time_t now = time (nullptr);
-      struct tm* t = localtime (&now);
-      t->tm_hour = t->tm_min = 0;
-      t->tm_sec = -1;
-
-      int extra = (t->tm_wday + 6) % 7;
-      t->tm_mday -= extra;
-      t->tm_mday += 7;
-
-      t->tm_isdst = -1;
-      _date = mktime (t);
+      _date = local_epoch (monday_of (today ()) + chrono::weeks{1}
+                           - chrono::seconds{1});
       return true;
     }
   }
@@ -2030,16 +1997,8 @@ bool Datetime::initializeEonw (Pig& pig)
     if (! unicodeLatinAlpha (following) &&
         ! unicodeLatinDigit (following))
     {
-      time_t now = time (nullptr);
-      struct tm* t = localtime (&now);
-      t->tm_hour = t->tm_min = 0;
-      t->tm_sec = -1;
-
-      int extra = (t->tm_wday + 6) % 7;
-      t->tm_mday += 14 - extra;
-
-      t->tm_isdst = -1;
-      _date = mktime (t);
+      _date = local_epoch (monday_of (today ()) + chrono::weeks{2}
+                           - chrono::seconds{1});
       return true;
     }
   }
@@ -2060,13 +2019,9 @@ bool Datetime::initializeSopww (Pig& pig)
     if (! unicodeLatinAlpha (following) &&
         ! unicodeLatinDigit (following))
     {
-      time_t now = time (nullptr);
-      struct tm* t = localtime (&now);
-
-      t->tm_mday += -6 - t->tm_wday;
-      t->tm_hour = t->tm_min = t->tm_sec = 0;
-      t->tm_isdst = -1;
-      _date = mktime (t);
+      const auto day = today ();
+      const int weekday = chrono::weekday{day}.c_encoding ();
+      _date = local_epoch (day + chrono::days{-6 - weekday});
       return true;
     }
   }
@@ -2087,13 +2042,9 @@ bool Datetime::initializeSoww (Pig& pig)
     if (! unicodeLatinAlpha (following) &&
         ! unicodeLatinDigit (following))
     {
-      time_t now = time (nullptr);
-      struct tm* t = localtime (&now);
-
-      t->tm_mday += 1 - t->tm_wday;
-      t->tm_hour = t->tm_min = t->tm_sec = 0;
-      t->tm_isdst = -1;
-      _date = mktime (t);
+      const auto day = today ();
+      const int weekday = chrono::weekday{day}.c_encoding ();
+      _date = local_epoch (day + chrono::days{1 - weekday});
       return true;
     }
   }
@@ -2114,13 +2065,9 @@ bool Datetime::initializeSonww (Pig& pig)
     if (! unicodeLatinAlpha (following) &&
         ! unicodeLatinDigit (following))
     {
-      time_t now = time (nullptr);
-      struct tm* t = localtime (&now);
-
-      t->tm_mday += 8 - t->tm_wday;
-      t->tm_hour = t->tm_min = t->tm_sec = 0;
-      t->tm_isdst = -1;
-      _date = mktime (t);
+      const auto day = today ();
+      const int weekday = chrono::weekday{day}.c_encoding ();
+      _date = local_epoch (day + chrono::days{8 - weekday});
       return true;
     }
   }
@@ -2141,14 +2088,10 @@ bool Datetime::initializeEopww (Pig& pig)
     if (! unicodeLatinAlpha (following) &&
         ! unicodeLatinDigit (following))
     {
-      time_t now = time (nullptr);
-      struct tm* t = localtime (&now);
-
-      t->tm_mday -= t->tm_wday + 1;
-      t->tm_hour = t->tm_min = 0;
-      t->tm_sec = -1;
-      t->tm_isdst = -1;
-      _date = mktime (t);
+      const auto day = today ();
+      const int weekday = chrono::weekday{day}.c_encoding ();
+      _date = local_epoch (day + chrono::days{-1 - weekday}
+                           - chrono::seconds{1});
       return true;
     }
   }
@@ -2169,14 +2112,10 @@ bool Datetime::initializeEoww (Pig& pig)
     if (! unicodeLatinAlpha (following) &&
         ! unicodeLatinDigit (following))
     {
-      time_t now = time (nullptr);
-      struct tm* t = localtime (&now);
-
-      t->tm_mday += 6 - t->tm_wday;
-      t->tm_hour = t->tm_min = 0;
-      t->tm_sec = -1;
-      t->tm_isdst = -1;
-      _date = mktime (t);
+      const auto day = today ();
+      const int weekday = chrono::weekday{day}.c_encoding ();
+      _date = local_epoch (day + chrono::days{6 - weekday}
+                               - chrono::seconds{1});
       return true;
     }
   }
@@ -2197,14 +2136,10 @@ bool Datetime::initializeEonww (Pig& pig)
     if (! unicodeLatinAlpha (following) &&
         ! unicodeLatinDigit (following))
     {
-      time_t now = time (nullptr);
-      struct tm* t = localtime (&now);
-
-      t->tm_mday += 13 - t->tm_wday;
-      t->tm_hour = t->tm_min = 0;
-      t->tm_sec = -1;
-      t->tm_isdst = -1;
-      _date = mktime (t);
+      const auto day = today ();
+      const int weekday = chrono::weekday{day}.c_encoding ();
+      _date = local_epoch (day + chrono::days{13 - weekday}
+                               - chrono::seconds{1});
       return true;
     }
   }
@@ -2225,22 +2160,7 @@ bool Datetime::initializeSopm (Pig& pig)
     if (! unicodeLatinAlpha (following) &&
         ! unicodeLatinDigit (following))
     {
-      time_t now = time (nullptr);
-      struct tm* t = localtime (&now);
-
-      t->tm_hour = t->tm_min = t->tm_sec = 0;
-
-      if (t->tm_mon == 0)
-      {
-        t->tm_year--;
-        t->tm_mon = 11;
-      }
-      else
-        t->tm_mon--;
-
-      t->tm_mday = 1;
-      t->tm_isdst = -1;
-      _date = mktime (t);
+      _date = local_epoch (month_start (-1));
       return true;
     }
   }
@@ -2261,13 +2181,7 @@ bool Datetime::initializeSom (Pig& pig)
     if (! unicodeLatinAlpha (following) &&
         ! unicodeLatinDigit (following))
     {
-      time_t now = time (nullptr);
-      struct tm* t = localtime (&now);
-
-      t->tm_hour = t->tm_min = t->tm_sec = 0;
-      t->tm_mday = 1;
-      t->tm_isdst = -1;
-      _date = mktime (t);
+      _date = local_epoch (month_start (0));
       return true;
     }
   }
@@ -2288,21 +2202,7 @@ bool Datetime::initializeSonm (Pig& pig)
     if (! unicodeLatinAlpha (following) &&
         ! unicodeLatinDigit (following))
     {
-      time_t now = time (nullptr);
-      struct tm* t = localtime (&now);
-
-      t->tm_hour = t->tm_min = t->tm_sec = 0;
-
-      t->tm_mon++;
-      if (t->tm_mon > 11)
-      {
-        t->tm_year++;
-        t->tm_mon = 0;
-      }
-
-      t->tm_mday = 1;
-      t->tm_isdst = -1;
-      _date = mktime (t);
+      _date = local_epoch (month_start (1));
       return true;
     }
   }
@@ -2323,14 +2223,7 @@ bool Datetime::initializeEopm (Pig& pig)
     if (! unicodeLatinAlpha (following) &&
         ! unicodeLatinDigit (following))
     {
-      time_t now = time (nullptr);
-      struct tm* t = localtime (&now);
-
-      t->tm_hour = t->tm_min = 0;
-      t->tm_sec = -1;
-      t->tm_mday = 1;
-      t->tm_isdst = -1;
-      _date = mktime (t);
+      _date = local_epoch (month_start (0) - chrono::seconds{1});
       return true;
     }
   }
@@ -2351,22 +2244,7 @@ bool Datetime::initializeEom (Pig& pig)
     if (! unicodeLatinAlpha (following) &&
         ! unicodeLatinDigit (following))
     {
-      time_t now = time (nullptr);
-      struct tm* t = localtime (&now);
-
-      t->tm_hour = t->tm_min = 0;
-      t->tm_sec = -1;
-
-      t->tm_mon++;
-      if (t->tm_mon > 11)
-      {
-        t->tm_year++;
-        t->tm_mon = 0;
-      }
-
-      t->tm_mday = 1;
-      t->tm_isdst = -1;
-      _date = mktime (t);
+      _date = local_epoch (month_start (1) - chrono::seconds{1});
       return true;
     }
   }
@@ -2387,21 +2265,7 @@ bool Datetime::initializeEonm (Pig& pig)
     if (! unicodeLatinAlpha (following) &&
         ! unicodeLatinDigit (following))
     {
-      time_t now = time (nullptr);
-      struct tm* t = localtime (&now);
-
-      t->tm_hour = t->tm_min = 0;
-      t->tm_sec = -1;
-      t->tm_mday = 1;
-      t->tm_mon += 2;
-      if (t->tm_mon > 11)
-      {
-        t->tm_year++;
-        t->tm_mon -= 12;
-      }
-
-      t->tm_isdst = -1;
-      _date = mktime (t);
+      _date = local_epoch (month_start (2) - chrono::seconds{1});
       return true;
     }
   }
@@ -2422,21 +2286,7 @@ bool Datetime::initializeSopq (Pig& pig)
     if (! unicodeLatinAlpha (following) &&
         ! unicodeLatinDigit (following))
     {
-      time_t now = time (nullptr);
-      struct tm* t = localtime (&now);
-
-      t->tm_mon -= t->tm_mon % 3;
-      t->tm_mon -= 3;
-      if (t->tm_mon < 0)
-      {
-        t->tm_mon += 12;
-        t->tm_year--;
-      }
-
-      t->tm_hour = t->tm_min = t->tm_sec = 0;
-      t->tm_mday = 1;
-      t->tm_isdst = -1;
-      _date = mktime (t);
+      _date = local_epoch (quarter_start (-1));
       return true;
     }
   }
@@ -2457,14 +2307,7 @@ bool Datetime::initializeSoq (Pig& pig)
     if (! unicodeLatinAlpha (following) &&
         ! unicodeLatinDigit (following))
     {
-      time_t now = time (nullptr);
-      struct tm* t = localtime (&now);
-
-      t->tm_hour = t->tm_min = t->tm_sec = 0;
-      t->tm_mon -= t->tm_mon % 3;
-      t->tm_mday = 1;
-      t->tm_isdst = -1;
-      _date = mktime (t);
+      _date = local_epoch (quarter_start (0));
       return true;
     }
   }
@@ -2485,20 +2328,7 @@ bool Datetime::initializeSonq (Pig& pig)
     if (! unicodeLatinAlpha (following) &&
         ! unicodeLatinDigit (following))
     {
-      time_t now = time (nullptr);
-      struct tm* t = localtime (&now);
-
-      t->tm_mon += 3 - (t->tm_mon % 3);
-      if (t->tm_mon > 11)
-      {
-        t->tm_mon -= 12;
-        ++t->tm_year;
-      }
-
-      t->tm_hour = t->tm_min = t->tm_sec = 0;
-      t->tm_mday = 1;
-      t->tm_isdst = -1;
-      _date = mktime (t);
+      _date = local_epoch (quarter_start (1));
       return true;
     }
   }
@@ -2519,15 +2349,7 @@ bool Datetime::initializeEopq (Pig& pig)
     if (! unicodeLatinAlpha (following) &&
         ! unicodeLatinDigit (following))
     {
-      time_t now = time (nullptr);
-      struct tm* t = localtime (&now);
-
-      t->tm_hour = t->tm_min = 0;
-      t->tm_sec = -1;
-      t->tm_mon -= t->tm_mon % 3;
-      t->tm_mday = 1;
-      t->tm_isdst = -1;
-      _date = mktime (t);
+      _date = local_epoch (quarter_start (0) - chrono::seconds{1});
       return true;
     }
   }
@@ -2548,21 +2370,7 @@ bool Datetime::initializeEoq (Pig& pig)
     if (! unicodeLatinAlpha (following) &&
         ! unicodeLatinDigit (following))
     {
-      time_t now = time (nullptr);
-      struct tm* t = localtime (&now);
-
-      t->tm_mon += 3 - (t->tm_mon % 3);
-      if (t->tm_mon > 11)
-      {
-        t->tm_mon -= 12;
-        ++t->tm_year;
-      }
-
-      t->tm_hour = t->tm_min = 0;
-      t->tm_sec = -1;
-      t->tm_mday = 1;
-      t->tm_isdst = -1;
-      _date = mktime (t);
+      _date = local_epoch (quarter_start (1) - chrono::seconds{1});
       return true;
     }
   }
@@ -2583,21 +2391,7 @@ bool Datetime::initializeEonq (Pig& pig)
     if (! unicodeLatinAlpha (following) &&
         ! unicodeLatinDigit (following))
     {
-      time_t now = time (nullptr);
-      struct tm* t = localtime (&now);
-
-      t->tm_hour = t->tm_min = 0;
-      t->tm_sec = -1;
-      t->tm_mon += 6 - (t->tm_mon % 3);
-      if (t->tm_mon > 11)
-      {
-        t->tm_mon -= 12;
-        ++t->tm_year;
-      }
-
-      t->tm_mday = 1;
-      t->tm_isdst = -1;
-      _date = mktime (t);
+      _date = local_epoch (quarter_start (2) - chrono::seconds{1});
       return true;
     }
   }
@@ -2618,15 +2412,7 @@ bool Datetime::initializeSopy (Pig& pig)
     if (! unicodeLatinAlpha (following) &&
         ! unicodeLatinDigit (following))
     {
-      time_t now = time (nullptr);
-      struct tm* t = localtime (&now);
-
-      t->tm_hour = t->tm_min = t->tm_sec = 0;
-      t->tm_mon = 0;
-      t->tm_mday = 1;
-      t->tm_year--;
-      t->tm_isdst = -1;
-      _date = mktime (t);
+      _date = local_epoch (year_start (-1));
       return true;
     }
   }
@@ -2647,14 +2433,7 @@ bool Datetime::initializeSoy (Pig& pig)
     if (! unicodeLatinAlpha (following) &&
         ! unicodeLatinDigit (following))
     {
-      time_t now = time (nullptr);
-      struct tm* t = localtime (&now);
-
-      t->tm_hour = t->tm_min = t->tm_sec = 0;
-      t->tm_mon = 0;
-      t->tm_mday = 1;
-      t->tm_isdst = -1;
-      _date = mktime (t);
+      _date = local_epoch (year_start (0));
       return true;
     }
   }
@@ -2675,15 +2454,7 @@ bool Datetime::initializeSony (Pig& pig)
     if (! unicodeLatinAlpha (following) &&
         ! unicodeLatinDigit (following))
     {
-      time_t now = time (nullptr);
-      struct tm* t = localtime (&now);
-
-      t->tm_hour = t->tm_min = t->tm_sec = 0;
-      t->tm_mon = 0;
-      t->tm_mday = 1;
-      t->tm_year++;
-      t->tm_isdst = -1;
-      _date = mktime (t);
+      _date = local_epoch (year_start (1));
       return true;
     }
   }
@@ -2704,15 +2475,7 @@ bool Datetime::initializeEopy (Pig& pig)
     if (! unicodeLatinAlpha (following) &&
         ! unicodeLatinDigit (following))
     {
-      time_t now = time (nullptr);
-      struct tm* t = localtime (&now);
-
-      t->tm_hour = t->tm_min = 0;
-      t->tm_sec = -1;
-      t->tm_mon = 0;
-      t->tm_mday = 1;
-      t->tm_isdst = -1;
-      _date = mktime (t);
+      _date = local_epoch (year_start (0) - chrono::seconds{1});
       return true;
     }
   }
@@ -2733,16 +2496,7 @@ bool Datetime::initializeEoy (Pig& pig)
     if (! unicodeLatinAlpha (following) &&
         ! unicodeLatinDigit (following))
     {
-      time_t now = time (nullptr);
-      struct tm* t = localtime (&now);
-
-      t->tm_hour = t->tm_min = 0;
-      t->tm_sec = -1;
-      t->tm_mon = 0;
-      t->tm_mday = 1;
-      t->tm_year++;
-      t->tm_isdst = -1;
-      _date = mktime (t);
+      _date = local_epoch (year_start (1) - chrono::seconds{1});
       return true;
     }
   }
@@ -2763,16 +2517,7 @@ bool Datetime::initializeEony (Pig& pig)
     if (! unicodeLatinAlpha (following) &&
         ! unicodeLatinDigit (following))
     {
-      time_t now = time (nullptr);
-      struct tm* t = localtime (&now);
-
-      t->tm_hour = t->tm_min = 0;
-      t->tm_sec = -1;
-      t->tm_mon = 0;
-      t->tm_mday = 1;
-      t->tm_year += 2;
-      t->tm_isdst = -1;
-      _date = mktime (t);
+      _date = local_epoch (year_start (2) - chrono::seconds{1});
       return true;
     }
   }
@@ -2780,6 +2525,42 @@ bool Datetime::initializeEony (Pig& pig)
   pig.restoreTo (checkpoint);
   return false;
 }
+
+namespace
+{
+auto easter_day (chrono::year year) -> chrono::local_days
+{
+  const int Y = int(year);
+  int a = Y % 19;
+  int b = Y / 100;
+  int c = Y % 100;
+  int d = b / 4;
+  int e = b % 4;
+  int f = (b + 8) / 25;
+  int g = (b - f + 1) / 3;
+  int h = (19 * a + b - d - g + 15) % 30;
+  int i = c / 4;
+  int k = c % 4;
+  int L = (32 + 2 * e + 2 * i - h - k) % 7;
+  int m = (a + 11 * h + 22 * L) / 451;
+  int month = (h + L - 7 * m + 114) / 31;
+  int day = ((h + L - 7 * m + 114) % 31) + 1;
+
+  return calendar_day (Y, month, day);
+}
+
+auto midsummer_epoch (chrono::year year, int day, chrono::weekday weekday)
+  -> time_t
+{
+  const auto date = chrono::local_days{year / chrono::June / day};
+  const auto anchor = local_epoch (date);
+  const auto fields = local_fields (anchor);
+  const auto local = local_time (fields);
+  const auto current = chrono::weekday{chrono::floor<chrono::days> (local)};
+  const int offset = int(weekday.c_encoding ()) - int(current.c_encoding ());
+  return local_epoch (local + chrono::days{offset}, fields.tm_isdst);
+}
+} // namespace
 
 ////////////////////////////////////////////////////////////////////////////////
 // easter       [ !<alpha> && !<digit> ]
@@ -2801,24 +2582,19 @@ bool Datetime::initializeEaster (Pig& pig)
        ! unicodeLatinAlpha (pig.peek ()) &&
        ! unicodeLatinDigit (pig.peek ()))
     {
-      time_t now = time (nullptr);
-      struct tm* t = localtime (&now);
+      const auto now = to_epoch (now_seconds ());
+      const auto year = chrono::year_month_day{
+        chrono::floor<chrono::days> (local_time (now))}.year ();
+      const auto offset = chrono::days{offsets[holiday]};
+      const auto easter = local_epoch (easter_day (year));
 
-      easter (t);
-      _date = mktime (t);
-
-      // If the result is earlier this year, then recalc for next year.
-      if (_date < now)
+      if (easter < now)
+        _date = local_epoch (easter_day (year + chrono::years{1}) + offset);
+      else
       {
-        t = localtime (&now);
-        t->tm_year++;
-        easter (t);
+        const auto fields = local_fields (easter);
+        _date = local_epoch (local_time (fields) + offset, fields.tm_isdst);
       }
-
-      // Adjust according to holiday-specific offsets.
-      t->tm_mday += offsets[holiday];
-
-      _date = mktime (t);
       return true;
     }
   }
@@ -2839,20 +2615,12 @@ bool Datetime::initializeMidsommar (Pig& pig)
     if (! unicodeLatinAlpha (following) &&
         ! unicodeLatinDigit (following))
     {
-      time_t now = time (nullptr);
-      struct tm* t = localtime (&now);
-      midsommar (t);
-      _date = mktime (t);
-
-      // If the result is earlier this year, then recalc for next year.
+      const auto now = to_epoch (now_seconds ());
+      const auto year = chrono::year_month_day{
+        chrono::floor<chrono::days> (local_time (now))}.year ();
+      _date = midsummer_epoch (year, 20, chrono::Saturday);
       if (_date < now)
-      {
-        t = localtime (&now);
-        t->tm_year++;
-        midsommar (t);
-      }
-
-      _date = mktime (t);
+        _date = midsummer_epoch (year + chrono::years{1}, 20, chrono::Saturday);
       return true;
     }
   }
@@ -2875,20 +2643,12 @@ bool Datetime::initializeMidsommarafton (Pig& pig)
     if (! unicodeLatinAlpha (following) &&
         ! unicodeLatinDigit (following))
     {
-      time_t now = time (nullptr);
-      struct tm* t = localtime (&now);
-      midsommarafton (t);
-      _date = mktime (t);
-
-      // If the result is earlier this year, then recalc for next year.
+      const auto now = to_epoch (now_seconds ());
+      const auto year = chrono::year_month_day{
+        chrono::floor<chrono::days> (local_time (now))}.year ();
+      _date = midsummer_epoch (year, 19, chrono::Friday);
       if (_date < now)
-      {
-        t = localtime (&now);
-        t->tm_year++;
-        midsommarafton (t);
-      }
-
-      _date = mktime (t);
+        _date = midsummer_epoch (year + chrono::years{1}, 19, chrono::Friday);
       return true;
     }
   }
@@ -2979,26 +2739,19 @@ bool Datetime::initializeInformalTime (Pig& pig)
     if (haveDesignator || ! needDesignator)
     {
       // Midnight today + hours:minutes:seconds.
-      time_t now = time (nullptr);
-      struct tm* t = localtime (&now);
-
-      int now_seconds  = (t->tm_hour * 3600) + (t->tm_min * 60) + t->tm_sec;
-      int calc_seconds = (hours      * 3600) + (minutes   * 60) + seconds;
-
-      if (Datetime::timeRelative &&
-          calc_seconds < now_seconds)
-        ++t->tm_mday;
+      const auto now = local_time (to_epoch (now_seconds ()));
+      auto day = chrono::floor<chrono::days> (now);
+      const auto clock = chrono::hours{hours} + chrono::minutes{minutes}
+                       + chrono::seconds{seconds};
+      if (Datetime::timeRelative && day + clock < now)
+        day += chrono::days{1};
 
       // Basic validation.
       if (hours   >= 0 && hours   < 24 &&
           minutes >= 0 && minutes < 60 &&
           seconds >= 0 && seconds < 60)
       {
-        t->tm_hour = hours;
-        t->tm_min = minutes;
-        t->tm_sec = seconds;
-        t->tm_isdst = -1;
-        _date = mktime (t);
+        _date = local_epoch (day + clock);
 
         return true;
       }
@@ -3007,59 +2760,6 @@ bool Datetime::initializeInformalTime (Pig& pig)
 
   pig.restoreTo (checkpoint);
   return false;
-}
-
-////////////////////////////////////////////////////////////////////////////////
-void Datetime::easter (struct tm* t) const
-{
-  int Y = t->tm_year + 1900;
-  int a = Y % 19;
-  int b = Y / 100;
-  int c = Y % 100;
-  int d = b / 4;
-  int e = b % 4;
-  int f = (b + 8) / 25;
-  int g = (b - f + 1) / 3;
-  int h = (19 * a + b - d - g + 15) % 30;
-  int i = c / 4;
-  int k = c % 4;
-  int L = (32 + 2 * e + 2 * i - h - k) % 7;
-  int m = (a + 11 * h + 22 * L) / 451;
-  int month = (h + L - 7 * m + 114) / 31;
-  int day = ((h + L - 7 * m + 114) % 31) + 1;
-
-  t->tm_isdst = -1;   // Requests that mktime determine summer time effect.
-  t->tm_mday  = day;
-  t->tm_mon   = month - 1;
-  t->tm_year  = Y - 1900;
-  t->tm_isdst = -1;
-  t->tm_hour = t->tm_min = t->tm_sec = 0;
-}
-
-////////////////////////////////////////////////////////////////////////////////
-void Datetime::midsommar (struct tm* t) const
-{
-  t->tm_mon = 5;                          // June.
-  t->tm_mday = 20;                        // Saturday after 20th.
-  t->tm_hour = t->tm_min = t->tm_sec = 0; // Midnight.
-  t->tm_isdst = -1;                       // Probably DST, but check.
-
-  time_t then = mktime (t);               // Obtain the weekday of June 20th.
-  struct tm* mid = localtime (&then);
-  t->tm_mday += 6 - mid->tm_wday;         // How many days after 20th.
-}
-
-////////////////////////////////////////////////////////////////////////////////
-void Datetime::midsommarafton (struct tm* t) const
-{
-  t->tm_mon = 5;                          // June.
-  t->tm_mday = 19;                        // Saturday after 20th.
-  t->tm_hour = t->tm_min = t->tm_sec = 0; // Midnight.
-  t->tm_isdst = -1;                       // Probably DST, but check.
-
-  time_t then = mktime (t);               // Obtain the weekday of June 19th.
-  struct tm* mid = localtime (&then);
-  t->tm_mday += 5 - mid->tm_wday;         // How many days after 19th.
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -3203,187 +2903,53 @@ bool Datetime::validate ()
   return true;
 }
 
-#ifndef HAVE_TIMEGM
-time_t Datetime::timegm(struct tm* tm) {
-  time_t ret;
-  char* tz;
-  tz = getenv("TZ");
-#ifdef _WIN32
-  _putenv_s("TZ", "UTC");
-  _tzset();
-  ret = mktime(tm);
-  if (tz)
-    _putenv_s("TZ", tz);
-  else
-    _putenv_s("TZ", "");
-  _tzset();
-#else
-  setenv("TZ", "UTC", 1);
-  tzset();
-  ret = mktime(tm);
-  if (tz)
-    setenv("TZ", tz, 1);
-  else
-    unsetenv("TZ");
-  tzset();
-#endif
-  return ret;
-}
-#endif
-
 ////////////////////////////////////////////////////////////////////////////////
-// int tm_sec;       seconds (0 - 60)
-// int tm_min;       minutes (0 - 59)
-// int tm_hour;      hours (0 - 23)
-// int tm_mday;      day of month (1 - 31)
-// int tm_mon;       month of year (0 - 11)
-// int tm_year;      year - 1900
-// int tm_wday;      day of week (0-6 or 1-7 depending on Datetime::weekstart)
-// int tm_yday;      day of year (0 - 365)
-// int tm_isdst;     is daylight saving time in effect?
-// char *tm_zone;    abbreviation of timezone name
-// long tm_gmtoff;   offset from UTC in seconds
 void Datetime::resolve ()
 {
-  // Don't touch the original values.
-  int year    = _year;
-  int month   = _month;
-  int week    = _week;
-  int weekday = _weekday;
-  int julian  = _julian;
-  int day     = _day;
-  int seconds = _seconds;
-  int offset  = _offset;
-  bool utc    = _utc;
+  // A UTC offset shifts the specified wall time and the reference day.
+  auto seconds = chrono::seconds{_seconds} - chrono::seconds{_offset};
+  const auto now = now_seconds () - chrono::seconds{_offset};
+  const bool utc = _utc || _offset != 0;
+  const auto reference = utc ? chrono::local_seconds{now.time_since_epoch ()}
+                             : local_time (to_epoch (now));
+  const auto reference_day = chrono::floor<chrono::days> (reference);
 
-  // Get current time.
-  time_t now = time (nullptr);
-
-  // A UTC offset needs to be accommodated.  Once the offset is subtracted,
-  // only local and UTC times remain.
-  if (offset)
-  {
-    seconds -= offset;
-    now -= offset;
-    utc = true;
-  }
-
-  // Get 'now' in the relevant location.
-  struct tm* t_now = utc ? gmtime (&now) : localtime (&now);
-
-  int seconds_now = (t_now->tm_hour * 3600) +
-                    (t_now->tm_min  *   60) +
-                     t_now->tm_sec;
-
-  // Project forward one day if the specified seconds are earlier in the day
-  // than the current seconds. Overridden by the ::timeRelative setting.
   if (Datetime::timeRelative &&
-      year    == 0           &&
-      month   == 0           &&
-      day     == 0           &&
-      week    == 0           &&
-      weekday == Datetime::weekstart &&
-      seconds < seconds_now)
-  {
-    seconds += 86400;
-  }
+      _year == 0 && _month == 0 && _day == 0 && _week == 0 &&
+      _weekday == Datetime::weekstart && seconds < reference - reference_day)
+    seconds += chrono::days{1};
 
-  // Convert week + weekday --> julian, possibly in the previous or next
-  // calendar year (for ISO8601 weeks).  Weekday will be 1-7 if weekstart = 1,
-  // as per ISO week spec.  This is incompatible with tm.tm_wday (which is
-  // 0-6, Sunday based), but that field is not assigned anywhere in this
-  // function, and note that mktime() uses tm_wday only as an output field.
-  // We use Datetime::weekstart as a hint about whether the user is
-  // giving/wants ISO weeks, although the very use of 2024-W30 and 2024-W30-1
-  // format is from ISO8601 in the first place.
-  //
-  if (week)
+  auto day = reference_day;
+  if (_week)
   {
-    // Get 0-based (Sunday) and 1-based (Monday, ie ISO) dow for 4th Jan
-    // 0 Sun, 1 Mon, 2 Tue, 3 Wed, 4 Thu, 5 Fri, 6 Sat
-    //        1 Mon, 2 Tue, 3 Wed, 4 Thu, 5 Fri, 6 Sat, 7 Sun
-    //
-    int jan4dow0 = dayOfWeek (year, 1, 4);
-    int jan4dow1 = (jan4dow0 == 0 ? 7 : jan4dow0);
-
+    const auto jan4 = calendar_day (_year, 1, 4);
     if (Datetime::weekstart == 1)
-    {
-      // https://en.wikipedia.org/wiki/ISO_week_date
-      julian = week * 7 + weekday - (jan4dow1 + 3);
-      if (julian < 1)
-      {
-        julian += daysInYear (--year);
-      }
-      else
-      {
-        int yeardays = daysInYear (year);
-        if (julian > yeardays)
-        {
-          year++;
-          julian -= yeardays;
-        }
-      }
-    }
+      day = monday_of (jan4) + chrono::weeks{_week - 1}
+                            + chrono::days{_weekday - 1};
     else
     {
-      // Prior algorithm that was used for all weekstarts before, now only
-      // used for Sunday weekstarts
-      julian = week * 7 + weekday - jan4dow0 - 3;
+      // Preserve Taskwarrior's Sunday-based week-date convention.
+      const int jan4_weekday = chrono::weekday{jan4}.c_encoding ();
+      const int ordinal = _week * 7 + _weekday - jan4_weekday - 3;
+      day = ordinal ? calendar_day (_year, 1, ordinal)
+                    : calendar_day (_year, _month, _day);
     }
   }
-
-  // Provide default values for year, month, day.
-  else
+  else if (_julian)
   {
-    // Default values for year, month, day:
-    //
-    // y   m   d  -->  y   m   d
-    // y   m   -  -->  y   m   1
-    // y   -   -  -->  y   1   1
-    // -   -   -  -->  now now now
-    //
-    if (year == 0)
-    {
-      year  = t_now->tm_year + 1900;
-      month = t_now->tm_mon + 1;
-      day   = t_now->tm_mday;
-    }
-    else
-    {
-      if (month == 0)
-      {
-        month = 1;
-        day   = 1;
-      }
-      else if (day == 0)
-        day = 1;
-    }
+    const auto reference_date = chrono::year_month_day{reference_day};
+    const int year = _year ? _year : int(reference_date.year ());
+    day = calendar_day (year, 1, _julian);
+  }
+  else if (_year)
+  {
+    const int month = _month ? _month : 1;
+    day = calendar_day (_year, month, _month && _day ? _day : 1);
   }
 
-  if (julian)
-  {
-    month = 1;
-    day = julian;
-  }
-
-  struct tm t {};
-  t.tm_isdst = -1;  // Requests that mktime/gmtime determine summer time effect.
-  t.tm_year = year - 1900;
-  t.tm_mon = month - 1;
-  t.tm_mday = day;
-
-  if (seconds > 86400)
-  {
-    int days = seconds / 86400;
-    t.tm_mday += days;
-    seconds %= 86400;
-  }
-
-  t.tm_hour = seconds / 3600;
-  t.tm_min = (seconds % 3600) / 60;
-  t.tm_sec = seconds % 60;
-
-  _date = utc ? timegm (&t) : mktime (&t);
+  const auto timestamp = day + seconds;
+  _date = utc ? to_epoch (chrono::sys_seconds{timestamp.time_since_epoch ()})
+              : local_epoch (timestamp);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -3402,57 +2968,31 @@ std::string Datetime::toEpochString () const
 // 19980119T070000Z =  YYYYMMDDThhmmssZ
 std::string Datetime::toISO () const
 {
-  struct tm* t = gmtime (&_date);
-
-  std::stringstream iso;
-  iso << std::setw (4) << std::setfill ('0') << t->tm_year + 1900
-      << std::setw (2) << std::setfill ('0') << t->tm_mon + 1
-      << std::setw (2) << std::setfill ('0') << t->tm_mday
-      << 'T'
-      << std::setw (2) << std::setfill ('0') << t->tm_hour
-      << std::setw (2) << std::setfill ('0') << t->tm_min
-      << std::setw (2) << std::setfill ('0') << t->tm_sec
-      << 'Z';
-
-  return iso.str ();
+  return std::format ("{:%Y%m%dT%H%M%SZ}", from_epoch (_date));
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // 1998-01-19T07:00:00 =  YYYY-MM-DDThh:mm:ss
 std::string Datetime::toISOLocalExtended () const
 {
-  struct tm* t = localtime (&_date);
-
-  std::stringstream iso;
-  iso << std::setw (4) << std::setfill ('0') << t->tm_year + 1900
-      << '-'
-      << std::setw (2) << std::setfill ('0') << t->tm_mon + 1
-      << '-'
-      << std::setw (2) << std::setfill ('0') << t->tm_mday
-      << 'T'
-      << std::setw (2) << std::setfill ('0') << t->tm_hour
-      << ':'
-      << std::setw (2) << std::setfill ('0') << t->tm_min
-      << ':'
-      << std::setw (2) << std::setfill ('0') << t->tm_sec;
-
-  return iso.str ();
+  return std::format ("{:%FT%T}", local_time (_date));
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 double Datetime::toJulian () const
 {
-  return (_date / 86400.0) + 2440587.5;
+  using fractional_days = chrono::duration<double, chrono::days::period>;
+  return fractional_days{from_epoch (_date).time_since_epoch ()}.count ()
+       + 2440587.5;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 void Datetime::toYMD (int& y, int& m, int& d) const
 {
-  struct tm* t = localtime (&_date);
-
-  m = t->tm_mon + 1;
-  d = t->tm_mday;
-  y = t->tm_year + 1900;
+  const auto date = chrono::year_month_day{local_day (_date)};
+  y = int(date.year ());
+  m = unsigned(date.month ());
+  d = unsigned(date.day ());
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -3498,27 +3038,29 @@ std::string Datetime::toString (const std::string& format) const
 ////////////////////////////////////////////////////////////////////////////////
 Datetime Datetime::startOfDay () const
 {
-  return { year (), month (), day () };
+  return { local_epoch (local_day (_date)) };
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 Datetime Datetime::startOfWeek () const
 {
-  Datetime sow (_date);
-  sow -= (dayOfWeek () * 86400);
-  return { sow.year (), sow.month (), sow.day () };
+  // The existing week boundary is based on elapsed days before local midnight.
+  const auto previous = from_epoch (_date) - chrono::days{dayOfWeek ()};
+  return { local_epoch (local_day (to_epoch (previous))) };
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 Datetime Datetime::startOfMonth () const
 {
-  return { year (), month (), 1 };
+  const auto date = chrono::year_month_day{local_day (_date)};
+  return { local_epoch (chrono::local_days{date.year () / date.month () / 1}) };
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 Datetime Datetime::startOfYear () const
 {
-  return { year (), 1, 1 };
+  const auto year = chrono::year_month_day{local_day (_date)}.year ();
+  return { local_epoch (chrono::local_days{year / chrono::January / 1}) };
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -3562,20 +3104,11 @@ bool Datetime::valid (
 ////////////////////////////////////////////////////////////////////////////////
 bool Datetime::valid (const int y, const int m, const int d)
 {
-  // Check that the year is valid.
-  if (y < 0)
+  if (y < 0 || m < 1 || m > 12 || d < 1 || d > 31)
     return false;
 
-  // Check that the month is valid.
-  if (m < 1 || m > 12)
-    return false;
-
-  // Finally check that the days fall within the acceptable range for this
-  // month, and whether this is a leap year.
-  if (d < 1 || d > Datetime::daysInMonth (y, m))
-    return false;
-
-  return true;
+  // Gregorian leap years repeat every 400 years.
+  return (chrono::year{y % 400} / m / d).ok ();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -3596,24 +3129,15 @@ bool Datetime::valid (const int y, const int d)
 // Static
 bool Datetime::leapYear (int year)
 {
-  return ((! (year % 4)) && (year % 100)) ||
-         ! (year % 400);
+  return chrono::year{year % 400}.is_leap ();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // Static
 int Datetime::daysInMonth (int year, int month)
 {
-  // Protect against arguments being passed in the wrong order.
-  assert (year >= 1969 && year <= 9999);
-  assert (month >= 1 && month <= 31);
-
-  static int days[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
-
-  if (month == 2 && Datetime::leapYear (year))
-    return 29;
-
-  return days[month - 1];
+  assert (month >= 1 && month <= 12);
+  return unsigned((chrono::year{year % 400} / month / chrono::last).day ());
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -3674,26 +3198,11 @@ int Datetime::dayOfWeek (const std::string& input)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// Using variant of Zeller's Congruence snarfed from RFC3339 appendix B
 // Static
 int Datetime::dayOfWeek (int year, int month, int day)
 {
-  int cent;
-
-  /* adjust months so February is the last one */
-  month -= 2;
-  if (month < 1)
-  {
-    month += 12;
-    --year;
-  }
-
-  /* split by century */
-  cent = year / 100;
-  year %= 100;
-
-  return ((26 * month - 2) / 10
-          + day + year + year / 4 + cent / 4 + 5 * cent) % 7;
+  const auto date = calendar_day (year % 400, month, day);
+  return chrono::weekday{date}.c_encoding ();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -3754,75 +3263,65 @@ int Datetime::length (const std::string& format)
 ////////////////////////////////////////////////////////////////////////////////
 int Datetime::month () const
 {
-  struct tm* t = localtime (&_date);
-  return t->tm_mon + 1;
+  const auto date = chrono::year_month_day{local_day (_date)};
+  return unsigned(date.month ());
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 int Datetime::week () const
 {
-  struct tm* t = localtime (&_date);
-
-  char weekStr[3];
+  const auto day = local_day (_date);
   if (Datetime::weekstart == 0)
-    strftime (weekStr, sizeof (weekStr), "%U", t);
-  else if (Datetime::weekstart == 1)
-    strftime (weekStr, sizeof (weekStr), "%V", t);
-  else
-    throw std::string ("The week may only start on a Sunday or Monday.");
-
-  int weekNumber = strtol (weekStr, nullptr, 10);
-
-  return weekNumber;
+    return std::stoi (std::format ("{:%U}", day));
+  if (Datetime::weekstart == 1)
+    return std::stoi (std::format ("{:%V}", day));
+  throw std::string ("The week may only start on a Sunday or Monday.");
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 int Datetime::day () const
 {
-  struct tm* t = localtime (&_date);
-  return t->tm_mday;
+  const auto date = chrono::year_month_day{local_day (_date)};
+  return unsigned(date.day ());
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 int Datetime::year () const
 {
-  struct tm* t = localtime (&_date);
-  return t->tm_year + 1900;
+  const auto date = chrono::year_month_day{local_day (_date)};
+  return int(date.year ());
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 int Datetime::dayOfWeek () const
 {
-  struct tm* t = localtime (&_date);
-  return t->tm_wday;
+  return chrono::weekday{local_day (_date)}.c_encoding ();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 int Datetime::dayOfYear () const
 {
-  struct tm* t = localtime (&_date);
-  return t->tm_yday + 1;
+  const auto day = local_day (_date);
+  const auto year = chrono::year_month_day{day}.year ();
+  return (day - chrono::local_days{year / chrono::January / 1}).count () + 1;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 int Datetime::hour () const
 {
-  struct tm* t = localtime (&_date);
-  return t->tm_hour;
+  return local_clock (_date).hours ().count ();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 int Datetime::minute () const
 {
-  struct tm* t = localtime (&_date);
-  return t->tm_min;
+  return local_clock (_date).minutes ().count ();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 int Datetime::second () const
 {
-  struct tm* t = localtime (&_date);
-  return t->tm_sec;
+  return local_clock (_date).seconds ().count ();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -3908,89 +3407,61 @@ bool Datetime::sameYear (const Datetime& rhs) const
 ////////////////////////////////////////////////////////////////////////////////
 Datetime Datetime::operator+ (const int64_t delta)
 {
-  return { _date + delta };
+  return { to_epoch (from_epoch (_date) + chrono::seconds{delta}) };
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 Datetime Datetime::operator- (const int64_t delta)
 {
-  return { _date - delta };
+  return { to_epoch (from_epoch (_date) - chrono::seconds{delta}) };
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 Datetime& Datetime::operator+= (const int64_t delta)
 {
-  _date += (time_t) delta;
+  _date = to_epoch (from_epoch (_date) + chrono::seconds{delta});
   return *this;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 Datetime& Datetime::operator-= (const int64_t delta)
 {
-  _date -= (time_t) delta;
+  _date = to_epoch (from_epoch (_date) - chrono::seconds{delta});
   return *this;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 time_t Datetime::operator- (const Datetime& rhs)
 {
-  return _date - rhs._date;
+  return (from_epoch (_date) - from_epoch (rhs._date)).count ();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // Prefix decrement by one day.
 void Datetime::operator-- ()
 {
-  Datetime yesterday = startOfDay () - 1;
-  yesterday = Datetime (yesterday.year (),
-                        yesterday.month (),
-                        yesterday.day (),
-                        hour (),
-                        minute (),
-                        second ());
-  _date = yesterday._date;
+  _date = local_epoch (local_time (_date) - chrono::days{1});
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // Postfix decrement by one day.
 void Datetime::operator-- (int)
 {
-  Datetime yesterday = startOfDay () - 1;
-  yesterday = Datetime (yesterday.year (),
-                        yesterday.month (),
-                        yesterday.day (),
-                        hour (),
-                        minute (),
-                        second ());
-  _date = yesterday._date;
+  --(*this);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // Prefix increment by one day.
 void Datetime::operator++ ()
 {
-  Datetime tomorrow = (startOfDay () + 90001).startOfDay ();
-  tomorrow = Datetime (tomorrow.year (),
-                       tomorrow.month (),
-                       tomorrow.day (),
-                       hour (),
-                       minute (),
-                       second ());
-  _date = tomorrow._date;
+  _date = local_epoch (local_time (_date) + chrono::days{1});
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // Postfix increment by one day.
 void Datetime::operator++ (int)
 {
-  Datetime tomorrow = (startOfDay () + 90001).startOfDay ();
-  tomorrow = Datetime (tomorrow.year (),
-                       tomorrow.month (),
-                       tomorrow.day (),
-                       hour (),
-                       minute (),
-                       second ());
-  _date = tomorrow._date;
+  ++(*this);
 }
 
 ////////////////////////////////////////////////////////////////////////////////

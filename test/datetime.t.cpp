@@ -92,7 +92,7 @@ void testParseError (
 ////////////////////////////////////////////////////////////////////////////////
 int main (int, char**)
 {
-  UnitTest t (3458);
+  UnitTest t (3460);
 
   Datetime iso;
   std::string::size_type start = 0;
@@ -694,6 +694,14 @@ int main (int, char**)
 
     Datetime f_iso (2147483650);
     t.is (f_iso.toISO (), "20380119T031410Z", "2147483650 -> 20380119T031410Z");
+
+    t.is (Datetime ("1970-01-01T00:59:58+01:00").toISO (),
+          "19691231T235958Z", "UTC offsets can cross the Unix epoch");
+    if constexpr (sizeof (time_t) >= 8)
+      t.is (Datetime ("9999-12-31T23:59:59+01:00").toISO (),
+            "99991231T225959Z", "UTC conversion preserves dates in year 9999");
+    else
+      t.skip ("Year 9999 requires a 64-bit time_t");
 
     // Test known-overlapped ISO8601 year boundaries, including leap year 1980.
     // Only makes sense for weekstart == 1 which activates the ISO8601 algorithm.

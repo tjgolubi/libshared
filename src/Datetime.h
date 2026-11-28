@@ -192,9 +192,6 @@ private:
   bool initializeMidsommar      (Pig&);
   bool initializeMidsommarafton (Pig&);
   bool initializeInformalTime   (Pig&);
-  void easter (struct tm*) const;
-  void midsommar (struct tm*) const;
-  void midsommarafton (struct tm*) const;
 
   bool initializeNthDayInMonth  (const std::vector <std::string>&);
 
@@ -202,10 +199,6 @@ private:
 
   bool validate ();
   void resolve ();
-
-  #ifndef HAVE_TIMEGM
-  time_t timegm(struct tm*);
-  #endif
 
 public:
   int _year    {0};
