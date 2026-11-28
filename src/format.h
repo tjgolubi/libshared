@@ -33,7 +33,6 @@
 #include <vector>
 
 std::string formatHex (int);
-std::string format (double);
 
 std::string leftJustify (const int, const int);
 std::string leftJustify (const std::string&, const int);

@@ -46,14 +46,6 @@ std::string formatHex (int value)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-std::string format (double value)
-{
-  std::stringstream s;
-  s << std::fixed << value;
-  return s.str ();
-}
-
-////////////////////////////////////////////////////////////////////////////////
 std::string leftJustify (const int input, const int width)
 {
   std::stringstream s;
