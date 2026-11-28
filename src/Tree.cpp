@@ -26,7 +26,8 @@
 
 #include <Tree.h>
 #include <algorithm>
-#include <format.h>
+#include <clip.h>
+#include <format>
 #include <shared.h>
 #include <sstream>
 
@@ -95,7 +96,7 @@ void Tree::attribute (const std::string& name, const int value)
 // Accessor for attributes.
 void Tree::attribute (const std::string& name, const double value)
 {
-  _attributes[name] = format (value, 1, 8);
+  _attributes[name] = std::format ("{:.8g}", tjg::clipped (value));
 }
 
 ////////////////////////////////////////////////////////////////////////////////

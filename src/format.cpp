@@ -27,7 +27,6 @@
 #include <algorithm>
 #include <cctype>
 #include <cmake.h>
-#include <cmath>
 #include <cstring>
 #include <format.h>
 #include <iomanip>
@@ -42,44 +41,6 @@ std::string formatHex (int value)
 {
   std::stringstream s;
   s.setf (std::ios::hex, std::ios::basefield);
-  s << value;
-  return s.str ();
-}
-
-////////////////////////////////////////////////////////////////////////////////
-std::string format (float value, int width, int precision)
-{
-  std::stringstream s;
-  s.width (width);
-  s.precision (precision);
-  if (0 < value && value < 1)
-  {
-    // For value close to zero, width - 2 (2 accounts for the first zero and
-    // the dot) is the number of digits after zero that are significant
-    double factor = 1;
-    for (int i = 2; i < width; i++)
-      factor *= 10;
-    value = roundf (value * factor) / factor;
-  }
-  s << value;
-  return s.str ();
-}
-
-////////////////////////////////////////////////////////////////////////////////
-std::string format (double value, int width, int precision)
-{
-  std::stringstream s;
-  s.width (width);
-  s.precision (precision);
-  if (0 < value && value < 1)
-  {
-    // For value close to zero, width - 2 (2 accounts for the first zero and
-    // the dot) is the number of digits after zero that are significant
-    double factor = 1;
-    for (int i = 2; i < width; i++)
-      factor *= 10;
-    value = round (value * factor) / factor;
-  }
   s << value;
   return s.str ();
 }

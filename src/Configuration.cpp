@@ -28,9 +28,9 @@
 #include <FS.h>
 #include <JSON.h>
 #include <cinttypes>
+#include <clip.h>
 #include <cstdlib>
 #include <format>
-#include <format.h>
 #include <shared.h>
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -335,7 +335,7 @@ void Configuration::set (const std::string& key, const int value)
 ////////////////////////////////////////////////////////////////////////////////
 void Configuration::set (const std::string& key, const double value)
 {
-  (*this)[key] = format (value, 1, 8);
+  (*this)[key] = std::format ("{:.8g}", tjg::clipped (value));
   _dirty = true;
 }
 

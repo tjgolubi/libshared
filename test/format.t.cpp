@@ -54,18 +54,26 @@ int main (int, char**)
   t.is (formatHex (10),  "a",  "formatHex (10) -> a");
   t.is (formatHex (123), "7b", "formatHex (123) -> 7b");
 
-  // std::string format (float, int, int);
-  t.is (format (0.12345678, 8, 4),      "  0.1235",     "format (0.12345678,    8,   4) -> __0.1235");
-
-  t.is (format (1.23456789, 8, 1),      "       1",     "format (1.23456789,    8,   1) -> _______1");
-  t.is (format (1.23456789, 8, 2),      "     1.2",     "format (1.23456789,    8,   2) -> _____1.2");
-  t.is (format (1.23456789, 8, 3),      "    1.23",     "format (1.23456789,    8,   3) -> ____1.23");
-  t.is (format (1.23456789, 8, 4),      "   1.235",     "format (1.23456789,    8,   4) -> ___1.235");
-  t.is (format (1.23456789, 8, 5),      "  1.2346",     "format (1.23456789,    8,   5) -> __1.2346");
-  t.is (format (1.23456789, 8, 6),      " 1.23457",     "format (1.23456789,    8,   6) ->  1.23457");
-  t.is (format (1.23456789, 8, 7),      "1.234568",     "format (1.23456789,    8,   7) -> 1.234568");
-  t.is (format (1.23456789, 8, 8),      "1.2345679",    "format (1.23456789,    8,   8) -> 1.2345679");
-  t.is (format (2444238.56789, 12, 11), "2444238.5679", "format (2444238.56789, 12, 11) -> 2444238.5679");
+  t.is(std::format("{:8.4g}", clipped(0.12345678)), "  0.1235",
+       "clipped displays four significant digits below one");
+  t.is(std::format("{:8.1g}", clipped(1.23456789)), "       1",
+       "clipped displays one significant digit");
+  t.is(std::format("{:8.2g}", clipped(1.23456789)), "     1.2",
+       "clipped displays two significant digits");
+  t.is(std::format("{:8.3g}", clipped(1.23456789)), "    1.23",
+       "clipped displays three significant digits");
+  t.is(std::format("{:8.4g}", clipped(1.23456789)), "   1.235",
+       "clipped displays four significant digits");
+  t.is(std::format("{:8.5g}", clipped(1.23456789)), "  1.2346",
+       "clipped displays five significant digits");
+  t.is(std::format("{:8.6g}", clipped(1.23456789)), " 1.23457",
+       "clipped displays six significant digits");
+  t.is(std::format("{:8.7g}", clipped(1.23456789)), "1.234568",
+       "clipped displays seven significant digits");
+  t.is(std::format("{:8.8g}", clipped(1.23456789)), "1.234568",
+       "clipped reduces precision when eight significant digits overflow");
+  t.is(std::format("{:12.11g}", clipped(2444238.56789)), "2444238.5679",
+       "clipped displays eleven significant digits when they fit");
 
   // std::string leftJustify (const std::string&, const int);
   t.is (leftJustify (123, 3), "123",   "leftJustify 123,3 -> '123'");
