@@ -24,13 +24,26 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 
+#include <clip.h>
 #include <format.h>
 #include <test.h>
 
 ////////////////////////////////////////////////////////////////////////////////
 int main (int, char**)
 {
-  UnitTest t (89);
+  UnitTest t (94);
+
+  using tjg::clipped;
+  t.is(std::format("{:4.2f}", clipped(9.999)), "10.0",
+       "clipped retries when rounding carries into the integer part");
+  t.is(std::format("{:4.2e}", clipped(125.0)), "****",
+       "clipped marks overflow when the exponent cannot fit");
+  t.is(std::format("{:5.6g}", clipped(1234567.0)), "1e+06",
+       "clipped general presentation can switch to scientific notation");
+  t.is(std::format("{:{}.{}f}/{}", clipped(9.999), 4, 2, "end"), "10.0/end",
+       "clipped resolves dynamic fields without consuming the next argument");
+  t.is(std::format("{:界>7.2f}", clipped(1.5)), "界 1.50",
+       "clipped counts wide fill characters as two display columns");
 
   // std::string formatHex (int);
   t.is (formatHex (0),   "0",  "formatHex (0) -> 0");

@@ -21,6 +21,7 @@ set (shared_HEADERS Args.h
                     Table.h
                     Timer.h
                     Tree.h
+                    clip.h
                     shared.h
                     format.h
                     unicode.h
@@ -47,6 +48,7 @@ set (shared_SRCS Args.cpp
                  Table.cpp
                  Timer.cpp
                  Tree.cpp
+                 clip.cpp
                  format.cpp
                  ip.cpp
                  shared.cpp
@@ -60,6 +62,7 @@ if (LIBSHARED_IS_TOP_LEVEL)
   set (CMAKE_INSTALL_LIBDIR lib CACHE PATH "Output directory for libraries")
   install (TARGETS shared DESTINATION lib)
   install (FILES ${shared_HEADERS} DESTINATION include)
+  install (FILES tjg/format_specs.hpp DESTINATION include/tjg)
 endif ()
 
 add_executable (lex_executable lex.cpp)
