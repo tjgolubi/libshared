@@ -21,7 +21,7 @@ set (shared_HEADERS Args.h
                     Table.h
                     Timer.h
                     Tree.h
-                    clip.h
+                    clipped.h
                     shared.h
                     format.h
                     unicode.h
@@ -48,7 +48,7 @@ set (shared_SRCS Args.cpp
                  Table.cpp
                  Timer.cpp
                  Tree.cpp
-                 clip.cpp
+                 clipped.cpp
                  format.cpp
                  ip.cpp
                  shared.cpp
